@@ -19,7 +19,7 @@ const ShellToUse = "sh"
 func PrettyRun(command string) {
 	greenColorWriter := colorwriter.NewPrefixWriter(os.Stdout, color.New(color.FgGreen))
 	defer greenColorWriter.Flush()
-	fmt.Fprintf(greenColorWriter, "===> %s\n", command)
+	_, _ = fmt.Fprintf(greenColorWriter, "===> %s\n", command)
 
 	blueColorWriter := colorwriter.NewPrefixWriter(os.Stdout, color.New(color.FgCyan))
 	defer blueColorWriter.Flush()

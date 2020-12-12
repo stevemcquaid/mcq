@@ -166,4 +166,5 @@ func CI() {
 	Vet()
 	Lint()
 	Test()
+	Install()
 }
