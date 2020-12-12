@@ -394,3 +394,13 @@ func CI() error {
 		},
 	)
 }
+
+func Log() error {
+	return shell.OrderedRunner(
+		[]shell.RunningFunction{
+			&shell.StringFunction{
+				Arg:      "git log --all --decorate --oneline --graph",
+				Function: shell.PrettyRun,
+			},
+		})
+}
