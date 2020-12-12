@@ -1,14 +1,6 @@
 FROM golang:1.14.12-alpine3.11 as base
 RUN apk add --update --no-cache make bash curl git build-base
-ARG EXTRACT_PATH="/tmp/extract"
 ENV PATH=/go/bin:$PATH
-RUN mkdir -p ${EXTRACT_PATH}
-ARG GO111MODULE=on
-# Install bash-static
-ARG BASH_STATIC_VERSION="5.0"
-RUN curl -sL# https://github.com/robxu9/bash-static/releases/download/${BASH_STATIC_VERSION}/bash-linux -o ${EXTRACT_PATH}/bash-static \
-  && chmod +x ${EXTRACT_PATH}/bash-static \
-  && mv ${EXTRACT_PATH}/bash-static /usr/local/bash
 
 
 # Build the manager binary
@@ -52,7 +44,5 @@ RUN mcq ci
 FROM gcr.io/distroless/static:nonroot as final
 WORKDIR /
 COPY --chown=nonroot:nonroot --from=builder /workspace/build/app .
-COPY --chown=nonroot:nonroot --from=builder /workspace/build/app .
-COPY --chown=nonroot:nonroot --from=base /usr/local/bash .
 USER nonroot:nonroot
 ENTRYPOINT ["/app"]

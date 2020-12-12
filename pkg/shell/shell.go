@@ -14,19 +14,19 @@ import (
 	"github.com/stevemcquaid/mcq/pkg/colorwriter"
 )
 
-const ShellToUse = "bash"
+const ShellToUse = "sh"
 
 func PrettyRun(command string) {
-	yellowColorWriter := colorwriter.NewPrefixWriter(os.Stdout, color.New(color.FgCyan))
-	defer yellowColorWriter.Flush()
-	fmt.Fprintf(yellowColorWriter, "===> %s\n", command)
-
 	greenColorWriter := colorwriter.NewPrefixWriter(os.Stdout, color.New(color.FgGreen))
 	defer greenColorWriter.Flush()
+	fmt.Fprintf(greenColorWriter, "===> %s\n", command)
+
+	blueColorWriter := colorwriter.NewPrefixWriter(os.Stdout, color.New(color.FgCyan))
+	defer blueColorWriter.Flush()
 	redColorWriter := colorwriter.NewPrefixWriter(os.Stdout, color.New(color.FgRed))
 	defer redColorWriter.Flush()
 
-	stdOutWriter := textio.NewPrefixWriter(greenColorWriter, "||    ")
+	stdOutWriter := textio.NewPrefixWriter(blueColorWriter, "||    ")
 	defer stdOutWriter.Flush()
 
 	stdErrWriter := textio.NewPrefixWriter(redColorWriter, "||    ")
