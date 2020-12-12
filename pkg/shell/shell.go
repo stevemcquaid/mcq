@@ -3,34 +3,36 @@ package shell
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"os"
 	"os/exec"
 )
 
 const ShellToUse = "bash"
 
-func Run(command string) (string, string, error) {
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd := exec.Command(ShellToUse, "-c", command)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	return stdout.String(), stderr.String(), err
-}
+func PrettyRun(command string){
+	fmt.Printf("===> %s\n", command)
 
-func PrettyRun(command string) {
-	fmt.Printf("---> %s\n", command)
-	out, errout, err := Run(command)
+	cmd := exec.Command(ShellToUse, "-c", command)
+
+	var stdoutBuf, stderrBuf bytes.Buffer
+	cmd.Stdout = io.MultiWriter(os.Stdout, &stdoutBuf)
+	cmd.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
+
+	err := cmd.Run()
 	if err != nil {
+		fmt.Println("------ cmd.Run() failed ---")
 		fmt.Println("------ error --- ")
 		fmt.Println(err)
-	}
-	if out != "" {
-		fmt.Println("------ stdout ---")
-		fmt.Println(out)
-	}
-	if errout != "" {
-		fmt.Println("------ stderr ---")
-		fmt.Println(errout)
+
+		outStr, errStr := string(stdoutBuf.Bytes()), string(stderrBuf.Bytes())
+		if outStr != "" {
+			fmt.Println("------ stdout ---")
+			fmt.Println(outStr)
+		}
+		if errStr != "" {
+			fmt.Println("------ stderr ---")
+			fmt.Println(errStr)
+		}
 	}
 }
