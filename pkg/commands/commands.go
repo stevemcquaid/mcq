@@ -223,6 +223,9 @@ func Test() error {
 	return shell.OrderedRunner(
 		[]shell.RunningFunction{
 			&shell.VoidFunction{
+				Function: Deps,
+			},
+			&shell.VoidFunction{
 				Function: TestUnit,
 			},
 		},
