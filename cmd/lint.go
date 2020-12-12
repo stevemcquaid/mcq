@@ -11,7 +11,7 @@ var LintCmd = &cobra.Command{
 	Short: "-> golangci-lint, staticcheck",
 	Long:  `This subcommand runs static analysis tools`,
 	Run: func(cmd *cobra.Command, args []string) {
-		commands.Lint()
+		_ = commands.Lint()
 	},
 }
 

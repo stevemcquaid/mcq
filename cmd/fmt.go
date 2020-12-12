@@ -11,7 +11,7 @@ var fmtCmd = &cobra.Command{
 	Short: "-> go fmt",
 	Long:  `This subcommand runs go fmt on all code`,
 	Run: func(cmd *cobra.Command, args []string) {
-		commands.Fmt()
+		_ = commands.Fmt()
 	},
 }
 

@@ -12,7 +12,7 @@ var buildCmd = &cobra.Command{
 	Short: "-> go build",
 	Long:  `This subcommand builds the binary`,
 	Run: func(cmd *cobra.Command, args []string) {
-		commands.Build(viper.GetString("GIT_REPO"))
+		_ = commands.Build(viper.GetString("GIT_REPO"))
 	},
 }
 
@@ -21,7 +21,7 @@ var buildLinuxCmd = &cobra.Command{
 	Short: "-> go build GOOS=linux",
 	Long:  `This subcommand cross-compiles for linux`,
 	Run: func(cmd *cobra.Command, args []string) {
-		commands.BuildLinux(viper.GetString("GIT_REPO") + ".linux.amd64.bin")
+		_ = commands.BuildLinux(viper.GetString("GIT_REPO") + ".linux.amd64.bin")
 	},
 }
 
@@ -30,7 +30,7 @@ var buildWindowsCmd = &cobra.Command{
 	Short: "-> go build GOOS=windows",
 	Long:  `This subcommand cross-compiles for windows`,
 	Run: func(cmd *cobra.Command, args []string) {
-		commands.BuildWindows(viper.GetString("GIT_REPO") + ".windows.386.exe")
+		_ = commands.BuildWindows(viper.GetString("GIT_REPO") + ".windows.386.exe")
 	},
 }
 

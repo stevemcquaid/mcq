@@ -11,7 +11,7 @@ var CICmd = &cobra.Command{
 	Short: "Run almost everything",
 	Long:  `This subcommand runs all the tests and code checks`,
 	Run: func(cmd *cobra.Command, args []string) {
-		commands.CI()
+		_ = commands.CI()
 	},
 }
 
@@ -20,7 +20,7 @@ var AllCmd = &cobra.Command{
 	Short: "Run everything",
 	Long:  `This subcommand runs everything`,
 	Run: func(cmd *cobra.Command, args []string) {
-		commands.All()
+		_ = commands.All()
 	},
 }
 

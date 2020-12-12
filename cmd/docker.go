@@ -27,7 +27,7 @@ var dockerBuildCmd = &cobra.Command{
 		gitRepo := viper.GetString("GIT_REPO")
 		dockerBase := path.Join(gitOrg, gitRepo)
 		dockerImage := fmt.Sprintf("%s:%s", dockerBase, "latest")
-		commands.DockerBuild(dockerImage)
+		_ = commands.DockerBuild(dockerImage)
 	},
 }
 
@@ -41,7 +41,7 @@ var dockerRunCmd = &cobra.Command{
 		gitRepo := viper.GetString("GIT_REPO")
 		dockerBase := path.Join(gitOrg, gitRepo)
 		dockerImage := fmt.Sprintf("%s:%s", dockerBase, "latest")
-		commands.DockerRun(dockerImage)
+		_ = commands.DockerRun(dockerImage)
 	},
 }
 
@@ -55,7 +55,7 @@ var dockerPushCmd = &cobra.Command{
 		gitRepo := viper.GetString("GIT_REPO")
 		dockerBase := path.Join(gitOrg, gitRepo)
 		dockerImage := fmt.Sprintf("%s:%s", dockerBase, "latest")
-		commands.DockerPush(dockerImage)
+		_ = commands.DockerPush(dockerImage)
 	},
 }
 

@@ -12,7 +12,7 @@ var cleanCmd = &cobra.Command{
 	Short: "-> fmt deps vet",
 	Long:  `This subcommand preps for commit: runs fmt, deps & vet`,
 	Run: func(cmd *cobra.Command, args []string) {
-		commands.Clean()
+		_ = commands.Clean()
 	},
 }
 

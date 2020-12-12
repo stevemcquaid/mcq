@@ -11,7 +11,7 @@ var runCmd = &cobra.Command{
 	Short: "-> go run main.go",
 	Long:  `This subcommand runs the code`,
 	Run: func(cmd *cobra.Command, args []string) {
-		commands.Run()
+		_ = commands.Run()
 	},
 }
 

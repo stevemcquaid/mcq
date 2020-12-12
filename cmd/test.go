@@ -11,7 +11,7 @@ var testUnitCmd = &cobra.Command{
 	Short: "-> go test -tags=unit",
 	Long:  `This subcommand runs unit tests`,
 	Run: func(cmd *cobra.Command, args []string) {
-		commands.TestUnit()
+		_ = commands.TestUnit()
 	},
 }
 
@@ -20,7 +20,7 @@ var testIntegratinoCmd = &cobra.Command{
 	Short: "-> go test -tags=integration",
 	Long:  `This subcommand runs intregation tests`,
 	Run: func(cmd *cobra.Command, args []string) {
-		commands.TestIntegration()
+		_ = commands.TestIntegration()
 	},
 }
 
@@ -29,7 +29,7 @@ var testCmd = &cobra.Command{
 	Short: "-> go test",
 	Long:  `This subcommand runs all tests`,
 	Run: func(cmd *cobra.Command, args []string) {
-		commands.Test()
+		_ = commands.Test()
 	},
 }
 

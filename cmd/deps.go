@@ -11,7 +11,7 @@ var depsCmd = &cobra.Command{
 	Short: "-> go mod tidy, download, vendor",
 	Long:  `This subcommand runs go mod tidy, download & vendor `,
 	Run: func(cmd *cobra.Command, args []string) {
-		commands.Deps()
+		_ = commands.Deps()
 	},
 }
 

@@ -11,7 +11,7 @@ var coverCmd = &cobra.Command{
 	Short: "-> go tool cover",
 	Long:  `This subcommand runs all the tests and opens the coverage report`,
 	Run: func(cmd *cobra.Command, args []string) {
-		commands.Cover()
+		_ = commands.Cover()
 	},
 }
 

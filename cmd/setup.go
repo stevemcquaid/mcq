@@ -11,7 +11,7 @@ var setupCmd = &cobra.Command{
 	Short: "install dependencies",
 	Long:  `This subcommand installs build and lint dependencies`,
 	Run: func(cmd *cobra.Command, args []string) {
-		commands.Setup()
+		_ = commands.Setup()
 	},
 }
 
