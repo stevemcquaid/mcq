@@ -1,4 +1,4 @@
-package colorWriter
+package colorwriter
 
 import (
 	"bytes"

@@ -11,19 +11,19 @@ import (
 	// "github.com/fatih/color"
 	"github.com/segmentio/textio"
 
-	"github.com/stevemcquaid/mcq/pkg/colorWriter"
+	"github.com/stevemcquaid/mcq/pkg/colorwriter"
 )
 
 const ShellToUse = "bash"
 
 func PrettyRun(command string) {
-	yellowColorWriter := colorWriter.NewPrefixWriter(os.Stdout, color.New(color.FgCyan))
+	yellowColorWriter := colorwriter.NewPrefixWriter(os.Stdout, color.New(color.FgCyan))
 	defer yellowColorWriter.Flush()
 	fmt.Fprintf(yellowColorWriter, "===> %s\n", command)
 
-	greenColorWriter := colorWriter.NewPrefixWriter(os.Stdout, color.New(color.FgGreen))
+	greenColorWriter := colorwriter.NewPrefixWriter(os.Stdout, color.New(color.FgGreen))
 	defer greenColorWriter.Flush()
-	redColorWriter := colorWriter.NewPrefixWriter(os.Stdout, color.New(color.FgRed))
+	redColorWriter := colorwriter.NewPrefixWriter(os.Stdout, color.New(color.FgRed))
 	defer redColorWriter.Flush()
 
 	stdOutWriter := textio.NewPrefixWriter(greenColorWriter, "||    ")
