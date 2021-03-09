@@ -1,9 +1,9 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
+	"os/user"
 	"path"
 	"strings"
 
@@ -27,14 +27,30 @@ func GetModules() (gitOrg string, gitRepo string, err error) {
 	}
 
 	modulePaths := strings.Split(mod, "/")
-	if len(modulePaths) <= 1 {
-		return "", "", errors.New("unable to split module parts")
+	if len(modulePaths) == 0 {
+		return "", "", fmt.Errorf("module not found")
+	} else if len(modulePaths) == 1 {
+		userName, err := GetUserName()
+		if err != nil {
+			return "", "", err
+		}
+		gitOrg = userName
+		gitRepo = modulePaths[0]
+		return gitOrg, gitRepo, nil
 	}
 
 	gitOrg = modulePaths[len(modulePaths)-2]
 	gitRepo = modulePaths[len(modulePaths)-1]
 
 	return gitOrg, gitRepo, nil
+}
+
+func GetUserName() (string, error) {
+	user, err := user.Current()
+	if err != nil {
+		return "", fmt.Errorf("unable to get current user")
+	}
+	return user.Name, nil
 }
 
 func GetDockerImage() (string, error) {

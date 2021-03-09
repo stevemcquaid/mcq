@@ -38,7 +38,7 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	// @TODO - load this in thru go.mod
+	// Load the PWD golang module name
 	gitOrg, gitRepo, err := commands.GetModules()
 	if err != nil {
 		fmt.Println("unable to set GIT_ORG + GIT_REPO")

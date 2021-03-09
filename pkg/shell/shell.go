@@ -16,6 +16,7 @@ import (
 
 const ShellToUse = "sh"
 
+// @TODO - create different pretty printers without the runner command. and use them inside the prettyrun()
 func PrettyRun(command string) error {
 	greenColorWriter := colorwriter.NewPrefixWriter(os.Stdout, color.New(color.FgGreen))
 	defer greenColorWriter.Flush()
