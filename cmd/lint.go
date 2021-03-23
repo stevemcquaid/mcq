@@ -11,10 +11,13 @@ var LintCmd = &cobra.Command{
 	Short: "-> golangci-lint, staticcheck",
 	Long:  `This subcommand runs static analysis tools`,
 	Run: func(cmd *cobra.Command, args []string) {
-		_ = commands.Lint()
+		_ = commands.Lint(FixFlag)
 	},
 }
 
+var FixFlag bool
+
 func init() {
+	LintCmd.Flags().BoolVarP(&FixFlag, "fix", "f", false, "Fix found issues (if it's supported by the linter)")
 	RootCmd.AddCommand(LintCmd)
 }

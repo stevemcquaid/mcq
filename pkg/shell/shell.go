@@ -93,3 +93,13 @@ type VoidFunction struct {
 func (f *VoidFunction) Run() error {
 	return f.Function()
 }
+
+// BoolFunction implements RunningFunction interface, and supports Functions with a single bool argument
+type BoolFunction struct {
+	Arg      bool
+	Function func(input bool) error
+}
+
+func (f *BoolFunction) Run() error {
+	return f.Function(f.Arg)
+}

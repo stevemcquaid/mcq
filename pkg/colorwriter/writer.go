@@ -167,9 +167,7 @@ func isLine(b []byte) bool {
 	return len(b) != 0 && b[len(b)-1] == '\n'
 }
 
-var (
-	_ fmt.State = (*ColorWriter)(nil)
-)
+var _ fmt.State = (*ColorWriter)(nil)
 
 // Base returns the direct base of w, which may be w itself if it had no base
 // writer.
