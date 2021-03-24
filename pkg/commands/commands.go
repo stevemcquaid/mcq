@@ -346,22 +346,20 @@ func GolangCI(fix bool) error {
 
 
 func ReviewDog(PR int) error {
-	// userName, err := GetUserName()
-	// if err != nil {
-	// 	return err
-	// }
-
 	gitOrg, gitRepo, err := GetModules()
 	if err != nil {
 		return err
 	}
 
+	// lintCmd := "golint ./..."
+	lintCmd := "staticcheck -fail -tests -checks=\"all,-ST1000,-ST1021,-ST1020\" ./..."
+
 	command := []string{
 		fmt.Sprintf("export CI_PULL_REQUEST=%d;", PR),
 		fmt.Sprintf("export CI_REPO_OWNER=%s;", gitOrg),
 		fmt.Sprintf("export CI_REPO_NAME=%s;", gitRepo),
-		fmt.Sprintf("export CI_COMMIT=$(git rev-parse HEAD);"),
-		"golint ./... | reviewdog -f=golint -diff=\"git diff FETCH_HEAD\" -reporter=github-pr-review",
+		"export CI_COMMIT=$(git rev-parse HEAD);",
+		lintCmd + " | reviewdog -f=golint -diff=\"git diff FETCH_HEAD\" -reporter=github-pr-review",
 	}
 
 	return shell.OrderedRunner(
@@ -373,7 +371,6 @@ func ReviewDog(PR int) error {
 		},
 	)
 }
-
 
 // Run all linters
 func Lint(fixFlag bool) error {
