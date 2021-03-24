@@ -127,6 +127,7 @@ func ReviewDog(pr int, suggestions bool) error {
 			"git diff > $TMPFILE;",
 			"git stash -u && git stash drop;",
 			"reviewdog -f=golangci-lint -f.diff.strip=1 -reporter=github-pr-review < $TMPFILE;",
+			
 		}
 	}
 
