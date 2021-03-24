@@ -107,7 +107,7 @@ func ReviewDog(PR int) error {
 		fmt.Sprintf("export CI_REPO_OWNER=%s;", gitOrg),
 		fmt.Sprintf("export CI_REPO_NAME=%s;", gitRepo),
 		"export CI_COMMIT=$(git rev-parse HEAD);",
-		lintCmd + " | reviewdog -f=golint -diff=\"git diff FETCH_HEAD\" -reporter=github-pr-review",
+		lintCmd + " | reviewdog -f=golangci-lint -diff=\"git diff FETCH_HEAD\" -reporter=github-pr-review",
 	}
 
 	return shell.OrderedRunner(
