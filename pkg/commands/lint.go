@@ -99,8 +99,7 @@ func ReviewDog(PR int) error {
 		return err
 	}
 
-	// lintCmd := "golint ./..."
-	lintCmd := "staticcheck -fail -tests -checks=\"all,-ST1000,-ST1021,-ST1020\" ./..."
+	lintCmd := strings.Join(GolangciLintCommand, " ")
 
 	command := []string{
 		fmt.Sprintf("export CI_PULL_REQUEST=%d;", PR),
@@ -118,5 +117,5 @@ func ReviewDog(PR int) error {
 			},
 		},
 	)
-	
+
 }
