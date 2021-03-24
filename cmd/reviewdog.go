@@ -21,7 +21,7 @@ var (
 )
 
 func init() {
-	ReviewDogCmd.Flags().IntVarP(&PRNumFlag, "PullRequest", "p", 0, "Comment lint comments in review")
-	ReviewDogCmd.Flags().BoolVarP(&SuggestionsFlag, "Suggestions", "s", false, "Include suggested fixes in PR")
+	ReviewDogCmd.Flags().IntVarP(&PRNumFlag, "pull-request", "p", 0, "Comment lint comments in review")
+	ReviewDogCmd.Flags().BoolVarP(&SuggestionsFlag, "suggest", "s", false, "Include suggested fixes in PR")
 	RootCmd.AddCommand(ReviewDogCmd)
 }
