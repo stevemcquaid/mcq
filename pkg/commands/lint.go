@@ -75,7 +75,7 @@ var GolangciLintCommand = []string{
 	"--enable=whitespace",
 }
 
-func GolangCI(fix bool) error {
+func getGolangCICommandWithFix(fix bool) string {
 	var command []string
 	if fix {
 		command = append(GolangciLintCommand, "--fix")
@@ -83,10 +83,14 @@ func GolangCI(fix bool) error {
 		command = GolangciLintCommand
 	}
 
+	return strings.Join(command, " ")
+}
+
+func GolangCI(fix bool) error {
 	return shell.OrderedRunner(
 		[]shell.RunningFunction{
 			&shell.StringFunction{
-				Arg:      strings.Join(command, " "),
+				Arg:      getGolangCICommandWithFix(fix),
 				Function: shell.PrettyRun,
 			},
 		},
@@ -99,14 +103,21 @@ func ReviewDog(PR int) error {
 		return err
 	}
 
-	lintCmd := strings.Join(GolangciLintCommand, " ")
+	lintCmd := getGolangCICommandWithFix(true)
 
 	command := []string{
 		fmt.Sprintf("export CI_PULL_REQUEST=%d;", PR),
 		fmt.Sprintf("export CI_REPO_OWNER=%s;", gitOrg),
 		fmt.Sprintf("export CI_REPO_NAME=%s;", gitRepo),
 		"export CI_COMMIT=$(git rev-parse HEAD);",
-		lintCmd + " | reviewdog -f=golangci-lint -diff=\"git diff FETCH_HEAD\" -reporter=github-pr-review",
+
+		lintCmd+ ";",
+		"export TMPFILE=$(mktemp);",
+		"git diff > $TMPFILE;",
+		"git stash -u && git stash drop;",
+		"reviewdog -f=diff -f.diff.strip=1 -reporter=github-pr-review < $TMPFILE;",
+
+		"reviewdog -f=golangci-lint -diff=\"git diff FETCH_HEAD\" -reporter=github-pr-review",
 	}
 
 	return shell.OrderedRunner(
