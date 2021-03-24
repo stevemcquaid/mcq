@@ -122,7 +122,7 @@ func ReviewDog(pr int, suggestions bool) error {
 			fmt.Sprintf("export CI_REPO_NAME=%s;", gitRepo),
 			"export CI_COMMIT=$(git rev-parse HEAD);",
 
-			lintCmd + ";",
+			lintCmd+ ";",
 			"export TMPFILE=$(mktemp);",
 			"git diff > $TMPFILE;",
 			"git stash -u && git stash drop;",
