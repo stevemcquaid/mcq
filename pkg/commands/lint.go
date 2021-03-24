@@ -96,7 +96,7 @@ func GolangCI(fix bool) error {
 	)
 }
 
-func ReviewDog(pr int, suggestions bool) error {
+func ReviewDog(pr int, suggest bool) error {
 	gitOrg, gitRepo, err := GetModules()
 	if err != nil {
 		return err
@@ -112,7 +112,7 @@ func ReviewDog(pr int, suggestions bool) error {
 		lintCmd + " | reviewdog -f=golangci-lint -diff=\"git diff FETCH_HEAD\" -reporter=github-pr-review",
 	}
 
-	if suggestions {
+	if suggest {
 		// include suggestions
 		lintCmd = getGolangCICommandWithFix(true)
 
@@ -126,7 +126,7 @@ func ReviewDog(pr int, suggestions bool) error {
 			"export TMPFILE=$(mktemp);",
 			"git diff > $TMPFILE;",
 			"git stash -u && git stash drop;",
-			"reviewdog -f=golangci-lint -f.diff.strip=1 -reporter=github-pr-review < $TMPFILE;",
+			"reviewdog -f=diff -f.diff.strip=1 -reporter=github-pr-review < $TMPFILE;",
 			
 		}
 	}
