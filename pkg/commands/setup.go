@@ -33,6 +33,10 @@ func Setup() error {
 				Function: shell.PrettyRun,
 			},
 			&shell.StringFunction{
+				Arg:      "go get -u mvdan.cc/gofumpt",
+				Function: shell.PrettyRun,
+			},
+			&shell.StringFunction{
 				Arg:      "mkdir -p build",
 				Function: shell.PrettyRun,
 			},

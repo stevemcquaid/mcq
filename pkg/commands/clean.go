@@ -10,6 +10,9 @@ func Clean() error {
 			&shell.VoidFunction{
 				Function: Fmt,
 			},
+			&shell.VoidFunction{
+				Function: Fumpt,
+			},
 			&shell.StringFunction{
 				Arg:      "go mod tidy",
 				Function: shell.PrettyRun,

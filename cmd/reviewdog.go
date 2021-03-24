@@ -11,13 +11,17 @@ var ReviewDogCmd = &cobra.Command{
 	Short: "-> reviewdog",
 	Long:  `Runs reviewdog`,
 	Run: func(cmd *cobra.Command, args []string) {
-		_ = commands.ReviewDog(PRNumFlag)
+		_ = commands.ReviewDog(PRNumFlag, SuggestionsFlag)
 	},
 }
 
-var PRNumFlag int
+var (
+	PRNumFlag       int
+	SuggestionsFlag bool
+)
 
 func init() {
 	ReviewDogCmd.Flags().IntVarP(&PRNumFlag, "PullRequest", "p", 0, "Comment lint comments in review")
+	ReviewDogCmd.Flags().BoolVarP(&SuggestionsFlag, "Suggestions", "s", false, "Include suggested fixes in PR")
 	RootCmd.AddCommand(ReviewDogCmd)
 }
