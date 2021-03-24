@@ -212,6 +212,10 @@ func Setup() error {
 				Function: shell.PrettyRun,
 			},
 			&shell.StringFunction{
+				Arg:      "go get -u github.com/reviewdog/reviewdog/cmd/reviewdog",
+				Function: shell.PrettyRun,
+			},
+			&shell.StringFunction{
 				Arg:      "mkdir -p build",
 				Function: shell.PrettyRun,
 			},
@@ -339,6 +343,37 @@ func GolangCI(fix bool) error {
 		},
 	)
 }
+
+
+func ReviewDog(PR int) error {
+	// userName, err := GetUserName()
+	// if err != nil {
+	// 	return err
+	// }
+
+	gitOrg, gitRepo, err := GetModules()
+	if err != nil {
+		return err
+	}
+
+	command := []string{
+		fmt.Sprintf("export CI_PULL_REQUEST=%d;", PR),
+		fmt.Sprintf("export CI_REPO_OWNER=%s;", gitOrg),
+		fmt.Sprintf("export CI_REPO_NAME=%s;", gitRepo),
+		fmt.Sprintf("export CI_COMMIT=$(git rev-parse HEAD);"),
+		"golint ./... | reviewdog -f=golint -diff=\"git diff FETCH_HEAD\" -reporter=github-pr-review",
+	}
+
+	return shell.OrderedRunner(
+		[]shell.RunningFunction{
+			&shell.StringFunction{
+				Arg:      strings.Join(command, ""),
+				Function: shell.PrettyRun,
+			},
+		},
+	)
+}
+
 
 // Run all linters
 func Lint(fixFlag bool) error {
