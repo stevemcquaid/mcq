@@ -104,7 +104,7 @@ func ReviewDog(pr int, suggest bool) error {
 
 	// dont include suggestions
 	lintCmd := getGolangCICommandWithFix(false)
-	command := []string{
+	command:= []string{
 		fmt.Sprintf("export CI_PULL_REQUEST=%d;", pr),
 		fmt.Sprintf("export CI_REPO_OWNER=%s;", gitOrg),
 		fmt.Sprintf("export CI_REPO_NAME=%s;", gitRepo),
@@ -122,13 +122,13 @@ func ReviewDog(pr int, suggest bool) error {
 			fmt.Sprintf("export CI_REPO_NAME=%s;", gitRepo),
 			"export CI_COMMIT=$(git rev-parse HEAD);",
 
-			lintCmd+ ";",
+			lintCmd + ";",
 			"export TMPFILE=$(mktemp);",
 			"git diff > $TMPFILE;",
 			"git stash -u && git stash drop;",
 			"reviewdog -f=diff -f.diff.strip=1 -reporter=github-pr-review < $TMPFILE;",
-			
 		}
+
 	}
 
 	return shell.OrderedRunner(

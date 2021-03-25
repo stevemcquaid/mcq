@@ -16,7 +16,7 @@ var ReviewDogCmd = &cobra.Command{
 }
 
 var (
-	PRNumFlag       int
+	PRNumFlag   int
 	SuggestFlag bool
 )
 
