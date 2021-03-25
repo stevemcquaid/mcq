@@ -100,10 +100,11 @@ func ReviewDog(pr int, suggest bool) error {
 	gitOrg, gitRepo, err := GetModules()
 	if err != nil {
 		return err
+
 	}
 
 	// dont include suggestions
-	lintCmd := getGolangCICommandWithFix(false)
+	lintCmd:= getGolangCICommandWithFix(false)
 	command:= []string{
 		fmt.Sprintf("export CI_PULL_REQUEST=%d;", pr),
 		fmt.Sprintf("export CI_REPO_OWNER=%s;", gitOrg),
@@ -114,21 +115,19 @@ func ReviewDog(pr int, suggest bool) error {
 
 	if suggest {
 		// include suggestions
-		lintCmd = getGolangCICommandWithFix(true)
-
 		command = []string{
 			fmt.Sprintf("export CI_PULL_REQUEST=%d;", pr),
 			fmt.Sprintf("export CI_REPO_OWNER=%s;", gitOrg),
 			fmt.Sprintf("export CI_REPO_NAME=%s;", gitRepo),
 			"export CI_COMMIT=$(git rev-parse HEAD);",
-
-			lintCmd + ";",
-			"export TMPFILE=$(mktemp);",
-			"git diff > $TMPFILE;",
+			"export TMPFILELINT=$(mktemp);",
+			getGolangCICommandWithFix(false) + " --out-format=json > $TMPFILELINT;",
+			"export TMPFILEDIFF=$(mktemp);",
+			getGolangCICommandWithFix(true) + ";",
+			"git diff > $TMPFILEDIFF;",
 			"git stash -u && git stash drop;",
-			"reviewdog -f=diff -f.diff.strip=1 -reporter=github-pr-review < $TMPFILE;",
+			"cat $TMPFILELINT | reviewdog -f=golangci-lint -f.diff.strip=1 -diff=\"cat $TMPFILEDIFF\" -reporter=github-pr-review;",
 		}
-
 	}
 
 	return shell.OrderedRunner(
