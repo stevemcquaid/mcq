@@ -130,6 +130,9 @@ func ReviewDog(pr int, suggest bool) error {
 			// "cat $TMPFILELINT | reviewdog -f=golangci-lint -f.diff.strip=1 -diff=\"cat $TMPFILEDIFF\" -reporter=github-pr-review;",
 			// "cat $TMPFILELINT | reviewdog -name=\"gofmt\" -f=golangci-lint -diff=\"cat $TMPFILEDIFF\" -reporter=github-pr-review;",
 		}
+
+
+		
 	}
 
 	return shell.OrderedRunner(
