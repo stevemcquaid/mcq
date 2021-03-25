@@ -100,12 +100,11 @@ func ReviewDog(pr int, suggest bool) error {
 	gitOrg, gitRepo, err := GetModules()
 	if err != nil {
 		return err
-
 	}
 
 	// dont include suggestions
-	lintCmd:= getGolangCICommandWithFix(false)
-	command:= []string{
+	lintCmd := getGolangCICommandWithFix(false)
+	command := []string{
 		fmt.Sprintf("export CI_PULL_REQUEST=%d;", pr),
 		fmt.Sprintf("export CI_REPO_OWNER=%s;", gitOrg),
 		fmt.Sprintf("export CI_REPO_NAME=%s;", gitRepo),
@@ -126,9 +125,6 @@ func ReviewDog(pr int, suggest bool) error {
 			"git stash -u && git stash drop;",
 			"reviewdog -name=\"golangci-lint\" -f=diff -f.diff.strip=1 -reporter=github-pr-review < \"${TMPFILEDIFF}\"",
 		}
-
-
-		
 	}
 
 	return shell.OrderedRunner(
