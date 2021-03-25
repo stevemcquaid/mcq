@@ -126,7 +126,7 @@ func ReviewDog(pr int, suggest bool) error {
 			getGolangCICommandWithFix(true) + ";",
 			"git diff > $TMPFILEDIFF;",
 			"git stash -u && git stash drop;",
-			"cat $TMPFILELINT | reviewdog -f=diff -f.diff.strip=1 -diff=\"cat $TMPFILEDIFF\" -reporter=github-pr-review;",
+			"cat $TMPFILELINT | reviewdog -name=\"gofmt\" -f=golangci-lint -diff=\"cat $TMPFILEDIFF\" -reporter=github-pr-review;",
 		}
 	}
 
