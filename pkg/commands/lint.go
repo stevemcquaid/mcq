@@ -109,7 +109,7 @@ func ReviewDog(pr int, suggest bool) error {
 		fmt.Sprintf("export CI_REPO_OWNER=%s;", gitOrg),
 		fmt.Sprintf("export CI_REPO_NAME=%s;", gitRepo),
 		"export CI_COMMIT=$(git rev-parse HEAD);",
-		lintCmd + " | reviewdog -name=\"golangci-lint\" -f=golangci-lint -diff=\"git diff FETCH_HEAD\" -reporter=github-pr-review",
+		lintCmd + " --out-format=line-number | reviewdog -name=\"golangci-lint\" -f=golangci-lint -diff=\"git diff FETCH_HEAD\" -reporter=github-pr-review",
 	}
 
 	if suggest {
@@ -120,7 +120,7 @@ func ReviewDog(pr int, suggest bool) error {
 			fmt.Sprintf("export CI_REPO_NAME=%s;", gitRepo),
 			"export CI_COMMIT=$(git rev-parse HEAD);",
 			"export TMPFILEDIFF=$(mktemp);",
-			getGolangCICommandWithFix(true) + ";",
+			getGolangCICommandWithFix(true) + " --out-format=line-number; ",
 			"git diff > $TMPFILEDIFF;",
 			"git stash -u && git stash drop;",
 			"reviewdog -name=\"golangci-lint\" -f=diff -f.diff.strip=1 -reporter=github-pr-review < \"${TMPFILEDIFF}\"",
