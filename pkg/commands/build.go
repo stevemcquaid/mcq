@@ -41,7 +41,7 @@ func BuildWindows(binaryName string) error {
 	return shell.OrderedRunner(
 		[]shell.RunningFunction{
 			&shell.StringFunction{
-				Arg:      fmt.Sprintf("GOOS=windows GOARCH=386 go build -o bin/%s ./", binaryName),
+				Arg:      fmt.Sprintf("GOOS=windows GOARCH=amd64 go build -o bin/%s ./", binaryName),
 				Function: shell.PrettyRun,
 			},
 			&shell.StringFunction{

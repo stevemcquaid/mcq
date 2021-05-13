@@ -30,7 +30,7 @@ var buildWindowsCmd = &cobra.Command{
 	Short: "-> go build GOOS=windows",
 	Long:  `This subcommand cross-compiles for windows`,
 	Run: func(cmd *cobra.Command, args []string) {
-		_ = commands.BuildWindows(viper.GetString("GIT_REPO") + ".windows.386.exe")
+		_ = commands.BuildWindows(viper.GetString("GIT_REPO") + ".windows.amd64.exe")
 	},
 }
 
