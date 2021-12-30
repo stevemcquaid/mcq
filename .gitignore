@@ -21,15 +21,13 @@ bin/*
 *.out
 coverage.txt
 
-# Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
-.glide/
 
 # IDE exclude
 .idea/
 .vscode/
 
 # Golang Vendor directory
-vendor/*
+#vendor/*
 
 # Helm Charts
 *.tgz

@@ -23,7 +23,7 @@ func Fumpt() error {
 	return shell.OrderedRunner(
 		[]shell.RunningFunction{
 			&shell.StringFunction{
-				Arg:      "find . -name '*.go' -not -wholename './vendor/*' | while read -r file; do gofumpt -w -s -l \"$file\"; done",
+				Arg:      "find . -name '*.go' -not -wholename './vendor/*' | while read -r file; do gofumpt -w -l \"$file\"; done",
 				Function: shell.PrettyRun,
 			},
 		},

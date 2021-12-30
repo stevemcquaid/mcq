@@ -28,10 +28,10 @@ func Setup() error {
 				Arg:      "go get -u golang.org/x/tools/cmd/goimports",
 				Function: shell.PrettyRun,
 			},
-			&shell.StringFunction{
-				Arg:      "go get -u github.com/reviewdog/reviewdog/cmd/reviewdog",
-				Function: shell.PrettyRun,
-			},
+			// &shell.StringFunction{
+			// 	Arg:      "go get -u github.com/reviewdog/reviewdog/cmd/reviewdog",
+			// 	Function: shell.PrettyRun,
+			// },
 			&shell.StringFunction{
 				Arg:      "go get -u mvdan.cc/gofumpt",
 				Function: shell.PrettyRun,
