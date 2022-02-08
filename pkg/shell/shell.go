@@ -75,6 +75,16 @@ func OrderedRunner(queue []RunningFunction) error {
 	return nil
 }
 
+// StringSliceFunction implements RunningFunction interface, and supports Functions with a single string argument
+type StringSliceFunction struct {
+	Arg      []string
+	Function func(input []string) error
+}
+
+func (f *StringSliceFunction) Run() error {
+	return f.Function(f.Arg)
+}
+
 // StringFunction implements RunningFunction interface, and supports Functions with a single string argument
 type StringFunction struct {
 	Arg      string

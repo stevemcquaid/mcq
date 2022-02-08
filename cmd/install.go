@@ -11,7 +11,7 @@ var installCmd = &cobra.Command{
 	Short: "-> go install",
 	Long:  `This subcommand installs the binary into gopath`,
 	Run: func(cmd *cobra.Command, args []string) {
-		_ = commands.Install()
+		_ = commands.Install(args)
 	},
 }
 

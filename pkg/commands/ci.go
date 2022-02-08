@@ -50,8 +50,9 @@ func CI() error {
 			&shell.VoidFunction{
 				Function: Test,
 			},
-			&shell.VoidFunction{
+			&shell.StringSliceFunction{
 				Function: Install,
+				Arg:      []string{},
 			},
 		},
 	)
