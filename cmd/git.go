@@ -15,6 +15,16 @@ var LogCmd = &cobra.Command{
 	},
 }
 
+var GitCleanCmd = &cobra.Command{
+	Use:   "gitclean",
+	Short: "-> ~git reset --hard HEAD; git clean -fd",
+	Long:  `This subcommand cleans up your git working directory`,
+	Run: func(cmd *cobra.Command, args []string) {
+		_ = commands.GitClean()
+	},
+}
+
 func init() {
 	RootCmd.AddCommand(LogCmd)
+	RootCmd.AddCommand(GitCleanCmd)
 }
