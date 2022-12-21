@@ -14,11 +14,11 @@ func Setup() error {
 			},
 
 			&shell.StringFunction{
-				Arg:      "go get honnef.co/go/tools/cmd/staticcheck@2020.1.6",
+				Arg:      "go get honnef.co/go/tools/cmd/staticcheck",
 				Function: shell.PrettyRun,
 			},
 			&shell.StringFunction{
-				Arg:      "go install honnef.co/go/tools/cmd/staticcheck@2020.1.6",
+				Arg:      "go install honnef.co/go/tools/cmd/staticcheck",
 				Function: shell.PrettyRun,
 			},
 

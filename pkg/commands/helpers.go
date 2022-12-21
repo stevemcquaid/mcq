@@ -2,7 +2,7 @@ package commands
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"os/user"
 	"path"
 	"strings"
@@ -11,7 +11,7 @@ import (
 )
 
 func ReadModFile() (string, error) {
-	goModBytes, err := ioutil.ReadFile("go.mod")
+	goModBytes, err := os.ReadFile("go.mod")
 	if err != nil {
 		return "", err
 	}

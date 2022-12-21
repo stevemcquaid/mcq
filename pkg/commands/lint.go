@@ -11,10 +11,10 @@ import (
 func Lint(fixFlag bool) error {
 	return shell.OrderedRunner(
 		[]shell.RunningFunction{
-			&shell.BoolFunction{
-				Arg:      fixFlag,
-				Function: GolangCI,
-			},
+			//&shell.BoolFunction{
+			//	Arg:      fixFlag,
+			//	Function: GolangCI,
+			//},
 			&shell.VoidFunction{
 				Function: StaticCheck,
 			},
@@ -44,7 +44,6 @@ var GolangciLintCommand = []string{
 	"--no-config",
 	"--issues-exit-code=1",
 	"--enable=bodyclose",
-	"--enable=deadcode",
 	"--enable=dupl",
 	"--enable=errcheck",
 	"--enable=gocognit",
@@ -53,24 +52,22 @@ var GolangciLintCommand = []string{
 	"--enable=gofmt",
 	"--enable=gofumpt",
 	"--enable=goimports",
-	"--enable=golint",
 	"--enable=gomodguard",
 	"--enable=gosec ",
 	"--enable=govet",
 	"--enable=ineffassign",
-	"--enable=interfacer ",
 	"--enable=megacheck",
 	"--enable=misspell",
 	"--enable=nakedret",
 	"--enable=prealloc",
+	"--enable=revive",
 	"--enable=rowserrcheck",
 	"--enable=staticcheck",
-	"--enable=structcheck ",
 	"--enable=stylecheck",
 	"--enable=typecheck",
 	"--enable=unconvert ",
 	"--enable=unparam",
-	"--enable=varcheck",
+	"--enable=unused",
 	"--enable=whitespace",
 }
 
