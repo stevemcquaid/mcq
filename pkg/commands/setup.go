@@ -13,31 +13,31 @@ func Setup() error {
 				Function: shell.PrettyRun,
 			},
 
+			// &shell.StringFunction{
+			// 	Arg:      "go get honnef.co/go/tools/cmd/staticcheck",
+			// 	Function: shell.PrettyRun,
+			// },
 			&shell.StringFunction{
-				Arg:      "go get honnef.co/go/tools/cmd/staticcheck",
-				Function: shell.PrettyRun,
-			},
-			&shell.StringFunction{
-				Arg:      "go install honnef.co/go/tools/cmd/staticcheck",
-				Function: shell.PrettyRun,
-			},
-
-			&shell.StringFunction{
-				Arg:      "go get -u github.com/pierrre/gotestcover",
+				Arg:      "go install honnef.co/go/tools/cmd/staticcheck@latest",
 				Function: shell.PrettyRun,
 			},
 
-			&shell.StringFunction{
-				Arg:      "go get -u golang.org/x/tools/cmd/cover",
-				Function: shell.PrettyRun,
-			},
+			// &shell.StringFunction{
+			// 	Arg:      "go get -u github.com/pierrre/gotestcover",
+			// 	Function: shell.PrettyRun,
+			// },
+			//
+			// &shell.StringFunction{
+			// 	Arg:      "go get -u golang.org/x/tools/cmd/cover",
+			// 	Function: shell.PrettyRun,
+			// },
 
+			// &shell.StringFunction{
+			// 	Arg:      "go get -u golang.org/x/tools/cmd/goimports",
+			// 	Function: shell.PrettyRun,
+			// },
 			&shell.StringFunction{
-				Arg:      "go get -u golang.org/x/tools/cmd/goimports",
-				Function: shell.PrettyRun,
-			},
-			&shell.StringFunction{
-				Arg:      "go install golang.org/x/tools/cmd/goimports",
+				Arg:      "go install golang.org/x/tools/cmd/goimports@latest",
 				Function: shell.PrettyRun,
 			},
 
@@ -46,12 +46,12 @@ func Setup() error {
 			// 	Function: shell.PrettyRun,
 			// },
 
+			// &shell.StringFunction{
+			// 	Arg:      "go get -u mvdan.cc/gofumpt",
+			// 	Function: shell.PrettyRun,
+			// },
 			&shell.StringFunction{
-				Arg:      "go get -u mvdan.cc/gofumpt",
-				Function: shell.PrettyRun,
-			},
-			&shell.StringFunction{
-				Arg:      "go install mvdan.cc/gofumpt",
+				Arg:      "go install mvdan.cc/gofumpt@latest",
 				Function: shell.PrettyRun,
 			},
 
