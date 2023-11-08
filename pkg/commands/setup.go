@@ -56,6 +56,11 @@ func Setup() error {
 			},
 
 			&shell.StringFunction{
+				Arg:      "go install github.com/wadey/gocovmerge@latest",
+				Function: shell.PrettyRun,
+			},
+
+			&shell.StringFunction{
 				Arg:      "mkdir -p build",
 				Function: shell.PrettyRun,
 			},
