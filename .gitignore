@@ -35,3 +35,7 @@ coverage.txt
 # config
 config.yaml
 build/*
+# Added by goreleaser init:
+dist/
+
+secrets.env
