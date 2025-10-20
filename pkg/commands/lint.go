@@ -9,14 +9,20 @@ import (
 
 // Run all linters
 func Lint(fixFlag bool) error {
-	return shell.OrderedRunner(
+	return shell.OrderedRunnerIgnoreErrors(
 		[]shell.RunningFunction{
-			//&shell.BoolFunction{
-			//	Arg:      fixFlag,
-			//	Function: GolangCI,
-			//},
 			&shell.VoidFunction{
 				Function: StaticCheck,
+			},
+			&shell.BoolFunction{
+				Arg:      fixFlag,
+				Function: GolangCI,
+			},
+			&shell.BoolFunction{
+				Function: GoCyclo,
+			},
+			&shell.BoolFunction{
+				Function: GoCogintCommand,
 			},
 		},
 	)
@@ -39,36 +45,36 @@ func StaticCheck() error {
 
 var GolangciLintCommand = []string{
 	"golangci-lint run",
-	"--deadline=30m",
-	"--disable-all",
-	"--no-config",
-	"--issues-exit-code=1",
-	"--enable=bodyclose",
-	"--enable=dupl",
-	"--enable=errcheck",
-	"--enable=gocognit",
-	"--enable=goconst ",
-	"--enable=gocyclo",
-	"--enable=gofmt",
-	"--enable=gofumpt",
-	"--enable=goimports",
-	"--enable=gomodguard",
-	"--enable=gosec ",
-	"--enable=govet",
-	"--enable=ineffassign",
-	"--enable=megacheck",
-	"--enable=misspell",
-	"--enable=nakedret",
-	"--enable=prealloc",
-	"--enable=revive",
-	"--enable=rowserrcheck",
-	"--enable=staticcheck",
-	"--enable=stylecheck",
-	"--enable=typecheck",
-	"--enable=unconvert ",
-	"--enable=unparam",
-	"--enable=unused",
-	"--enable=whitespace",
+	"--timeout=1m",
+	//"--disable-all",
+	//"--no-config",
+	//"--issues-exit-code=1",
+	//"--enable=bodyclose",
+	//"--enable=dupl",
+	//"--enable=errcheck",
+	//"--enable=gocognit",
+	//"--enable=goconst ",
+	//"--enable=gocyclo",
+	//"--enable=gofmt",
+	//"--enable=gofumpt",
+	//"--enable=goimports",
+	//"--enable=gomodguard",
+	//"--enable=gosec ",
+	//"--enable=govet",
+	//"--enable=ineffassign",
+	//"--enable=megacheck",
+	//"--enable=misspell",
+	//"--enable=nakedret",
+	//"--enable=prealloc",
+	//"--enable=revive",
+	//"--enable=rowserrcheck",
+	//"--enable=staticcheck",
+	//"--enable=stylecheck",
+	//"--enable=typecheck",
+	//"--enable=unconvert ",
+	//"--enable=unparam",
+	//"--enable=unused",
+	//"--enable=whitespace",
 }
 
 func getGolangCICommandWithFix(fix bool) string {
@@ -87,6 +93,36 @@ func GolangCI(fix bool) error {
 		[]shell.RunningFunction{
 			&shell.StringFunction{
 				Arg:      getGolangCICommandWithFix(fix),
+				Function: shell.PrettyRun,
+			},
+		},
+	)
+}
+
+var GocogintCommand = []string{
+	"gocognit -over 10  -ignore \"_test|testdata|vendor/*\" .",
+}
+
+func GoCogintCommand(fix bool) error {
+	return shell.OrderedRunner(
+		[]shell.RunningFunction{
+			&shell.StringFunction{
+				Arg:      strings.Join(GocogintCommand, " "),
+				Function: shell.PrettyRun,
+			},
+		},
+	)
+}
+
+var GocycloCommand = []string{
+	"gocyclo -over 25 .",
+}
+
+func GoCyclo(fix bool) error {
+	return shell.OrderedRunner(
+		[]shell.RunningFunction{
+			&shell.StringFunction{
+				Arg:      strings.Join(GocycloCommand, " "),
 				Function: shell.PrettyRun,
 			},
 		},

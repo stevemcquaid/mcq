@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/fatih/color"
 	// "github.com/fatih/color"
@@ -71,6 +72,21 @@ func OrderedRunner(queue []RunningFunction) error {
 		if err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// OrderedRunnerIgnoreErrors takes an array of objects of type RunningFunction and tells each to run in sequence, it aggregates errors and provides all at the end
+func OrderedRunnerIgnoreErrors(queue []RunningFunction) error {
+	var myErrors []string
+	for _, item := range queue {
+		err := item.Run()
+		if err != nil {
+			myErrors = append(myErrors, err.Error())
+		}
+	}
+	if myErrors != nil {
+		return fmt.Errorf("error: %s", strings.Join(myErrors, ". Error: "))
 	}
 	return nil
 }

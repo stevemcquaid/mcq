@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"reflect"
-	"unsafe"
 
 	"github.com/fatih/color"
 )
@@ -117,9 +115,8 @@ func (w *ColorWriter) write(b []byte) (int, error) {
 }
 
 func BytesToString(b []byte) string {
-	bh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
-	sh := reflect.StringHeader{Data: bh.Data, Len: bh.Len}
-	return *(*string)(unsafe.Pointer(&sh))
+	// Safe, idiomatic conversion. Avoids unsafe aliasing and reflect usage.
+	return string(b)
 }
 
 func (w *ColorWriter) discard(n int) {
