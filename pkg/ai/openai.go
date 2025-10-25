@@ -18,7 +18,8 @@ func generateUserStoryOpenAI(apiKey, featureRequest, modelID string, repoContext
 	modelName := getModelDisplayName(modelID)
 	showConnectionProgress("OpenAI", modelName)
 
-	prompt := createPrompt(featureRequest, repoContext)
+	config := GetUserStoryPromptConfig(featureRequest, repoContext)
+	prompt := GeneratePrompt(config)
 	client := openai.NewClient(apiKey)
 	req := createOpenAIRequest(modelID, prompt)
 

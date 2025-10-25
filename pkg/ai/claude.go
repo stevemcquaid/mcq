@@ -19,7 +19,8 @@ func generateUserStoryClaude(apiKey, featureRequest string, repoContext *RepoCon
 	logger.LogBasic("Starting Claude API request")
 	showConnectionProgress("Anthropic", "Claude Sonnet 4.5")
 
-	prompt := createPrompt(featureRequest, repoContext)
+	config := GetUserStoryPromptConfig(featureRequest, repoContext)
+	prompt := GeneratePrompt(config)
 	request := createClaudeRequest(prompt)
 
 	jsonData, err := json.Marshal(request)

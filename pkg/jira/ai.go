@@ -33,7 +33,8 @@ func (ae *AIExtractor) ExtractTitleWithAI(userStory, featureRequest string) (str
 	}
 
 	// Create a focused prompt for title extraction
-	prompt := createTitleExtractionPrompt(userStory, featureRequest)
+	config := ai.GetTitleExtractionPromptConfig(featureRequest, userStory)
+	prompt := ai.GeneratePrompt(config)
 
 	// Use the AI package to generate the title
 	title, err := ai.GenerateUserStory(model, prompt, nil)
@@ -44,18 +45,6 @@ func (ae *AIExtractor) ExtractTitleWithAI(userStory, featureRequest string) (str
 	// Clean up the title
 	title = cleanTitle(title)
 	return title, nil
-}
-
-// createTitleExtractionPrompt creates a focused prompt for title extraction
-func createTitleExtractionPrompt(userStory, featureRequest string) string {
-	return fmt.Sprintf(`Create a NEW concise, clear title (maximum 100 characters) for a Jira issue from the following user story and old title. The new title should be action-oriented and summarize the main goal or feature.
-Provide ONLY the new jira title
-Do NOT provide any other output.
-
-Original Feature Request: %s
-
-User Story: 
-%s`, featureRequest, userStory)
 }
 
 // cleanTitle cleans and truncates the title to fit JIRA requirements
