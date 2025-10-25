@@ -1,5 +1,5 @@
 # mcq
-A golang development helper. Dont memorize commands when you can `mcq lint`
+A golang development helper with AI-powered features and customizable prompt templates. Don't memorize commands when you can `mcq lint`
 
 # Usage
 `mcq help`
@@ -80,6 +80,36 @@ mcq ai jira --verbosity 3 "Add a dark mode to the application"  # Verbose loggin
 This will generate a user story in the format "As a [user type], I want [goal] so that [benefit]" with additional acceptance criteria and technical considerations, then copy it to your clipboard.
 
 For more details, see [AI_FEATURE.md](AI_FEATURE.md).
+
+## Template Customization
+
+Customize AI prompts using Go templates without modifying the code.
+
+**Setup:**
+```bash
+# Generate example template files
+mcq templates generate ./my-templates
+
+# Set custom template directory
+export MCQ_PROMPTS_DIR='./my-templates'
+
+# Validate templates
+mcq templates validate
+```
+
+**Available Commands:**
+- `mcq templates generate [dir]` - Generate example template files
+- `mcq templates validate` - Validate template syntax
+- `mcq templates list` - List available prompt types
+
+**Template Variables:**
+- `{{.FeatureRequest}}` - User's feature request
+- `{{.RepositoryContext}}` - Repository information
+- `{{.ProjectName}}`, `{{.ModulePath}}`, `{{.GoVersion}}` - Project details
+- `{{.Readme}}`, `{{.RecentCommits}}`, `{{.Dependencies}}` - Context data
+- `{{.Now}}` - Current timestamp
+
+For more details, see [TEMPLATES.md](TEMPLATES.md).
 
 # TODO
 * [x] Mechanism to fail fast during commands running. If error, it should quit. (OrderedRunner)

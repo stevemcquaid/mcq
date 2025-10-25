@@ -26,15 +26,13 @@ type PromptConfig struct {
 
 // GeneratePrompt creates a standardized prompt based on the type and configuration
 func GeneratePrompt(config PromptConfig) string {
-	// Initialize template manager if not already done
 	tm := GetTemplateManager()
 
 	// Load templates if not already loaded
 	if len(tm.templates) == 0 {
 		if err := tm.LoadTemplates(); err != nil {
-			// Fall back to old system if template loading fails
-			logger.LogError("Failed to load templates, using fallback", err)
-			return generatePromptFallback(config)
+			logger.LogError("Failed to load templates", err)
+			return getDefaultPrompt(config)
 		}
 	}
 
@@ -48,16 +46,15 @@ func GeneratePrompt(config PromptConfig) string {
 	// Generate prompt using template system
 	prompt, err := tm.GeneratePromptFromTemplate(config.Type, data)
 	if err != nil {
-		// Fall back to old system if template execution fails
-		logger.LogError("Failed to generate prompt from template, using fallback", err)
-		return generatePromptFallback(config)
+		logger.LogError("Failed to generate prompt from template", err)
+		return getDefaultPrompt(config)
 	}
 
 	return prompt
 }
 
-// generatePromptFallback provides fallback to the old prompt system
-func generatePromptFallback(config PromptConfig) string {
+// getDefaultPrompt provides default prompts when templates fail
+func getDefaultPrompt(config PromptConfig) string {
 	switch config.Type {
 	case PromptTypeUserStory:
 		return createUserStoryPrompt(config.FeatureRequest, config.RepositoryContext)

@@ -21,6 +21,18 @@ The `mcq ai jira` command converts vague feature requests into detailed user sto
 
    To make them persistent, add these lines to your shell profile (e.g., `~/.zshrc` or `~/.bash_profile`).
 
+3. **Customize Prompts (Optional)**: You can customize the AI prompts using Go templates:
+   ```bash
+   # Generate example template files
+   mcq templates generate ./my-templates
+   
+   # Set custom template directory
+   export MCQ_PROMPTS_DIR='./my-templates'
+   
+   # Validate templates
+   mcq templates validate
+   ```
+
 ## Usage
 
 ```bash
@@ -175,6 +187,68 @@ level=DEBUG-1 msg="Stream line" line="data: {\"type\":\"content_block_delta\",\"
 level=DEBUG-1 msg="Content delta" count=1 text="As a user"
 level=DEBUG msg="Stream processing complete" events=15 content_blocks=12
 level=INFO msg="Successfully copied to clipboard"
+```
+
+## Template Customization
+
+The AI prompts can be customized using Go templates. This allows you to modify the behavior and output format of the AI without changing the code.
+
+### Available Template Variables
+
+**For User Story Templates:**
+- `{{.FeatureRequest}}` - The user's feature request
+- `{{.RepositoryContext}}` - Repository information (if available)
+- `{{.ProjectName}}` - Project name from go.mod
+- `{{.ModulePath}}` - Module path from go.mod
+- `{{.GoVersion}}` - Go version from go.mod
+- `{{.ProjectType}}` - Detected project type
+- `{{.Readme}}` - README content
+- `{{.RecentCommits}}` - Recent commit messages
+- `{{.Dependencies}}` - Go dependencies
+- `{{.DirectoryStructure}}` - Directory structure
+- `{{.ConfigFiles}}` - Configuration files content
+- `{{.Now}}` - Current timestamp
+
+**For Title Extraction Templates:**
+- `{{.FeatureRequest}}` - The original feature request
+- `{{.UserStory}}` - The generated user story
+- `{{.Now}}` - Current timestamp
+
+### Template Commands
+
+```bash
+# Generate example template files
+mcq templates generate ./my-templates
+
+# Validate template syntax
+mcq templates validate
+
+# List available prompt types
+mcq templates list
+```
+
+### Example Custom Template
+
+```gotemplate
+{{/* Custom User Story Template */}}
+You are an expert product manager. Convert this feature request into a detailed user story.
+
+Feature: {{.FeatureRequest}}
+
+{{if .RepositoryContext}}
+Project Context:
+- Project: {{.ProjectName}}
+- Type: {{.ProjectType}}
+- Go Version: {{.GoVersion}}
+{{end}}
+
+Please provide:
+1. A user story in "As a [user], I want [goal] so that [benefit]" format
+2. Acceptance criteria
+3. Technical considerations
+4. Keep under 500 words
+
+User Story:
 ```
 
 ## Error Handling

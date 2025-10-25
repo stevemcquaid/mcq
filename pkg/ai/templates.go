@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/stevemcquaid/mcq/pkg/logger"
@@ -39,31 +38,24 @@ type TemplateData struct {
 // TemplateManager handles loading and caching of prompt templates
 type TemplateManager struct {
 	templates  map[PromptType]*template.Template
-	mutex      sync.RWMutex
 	promptsDir string
 }
 
-var (
-	templateManager *TemplateManager
-	once            sync.Once
-)
+var templateManager *TemplateManager
 
 // GetTemplateManager returns the singleton template manager
 func GetTemplateManager() *TemplateManager {
-	once.Do(func() {
+	if templateManager == nil {
 		templateManager = &TemplateManager{
 			templates:  make(map[PromptType]*template.Template),
 			promptsDir: os.Getenv("MCQ_PROMPTS_DIR"),
 		}
-	})
+	}
 	return templateManager
 }
 
 // LoadTemplates loads all prompt templates from the configured directory
 func (tm *TemplateManager) LoadTemplates() error {
-	tm.mutex.Lock()
-	defer tm.mutex.Unlock()
-
 	// Clear existing templates
 	tm.templates = make(map[PromptType]*template.Template)
 
@@ -171,9 +163,7 @@ User Story:
 
 // GeneratePromptFromTemplate generates a prompt using the template system
 func (tm *TemplateManager) GeneratePromptFromTemplate(promptType PromptType, data TemplateData) (string, error) {
-	tm.mutex.RLock()
 	tmpl, exists := tm.templates[promptType]
-	tm.mutex.RUnlock()
 
 	if !exists {
 		return "", fmt.Errorf("template not found for prompt type: %s", promptType)
@@ -203,8 +193,6 @@ func (tm *TemplateManager) GeneratePromptFromTemplate(promptType PromptType, dat
 
 // ValidateTemplates validates all loaded templates
 func (tm *TemplateManager) ValidateTemplates() error {
-	tm.mutex.RLock()
-	defer tm.mutex.RUnlock()
 
 	for promptType, tmpl := range tm.templates {
 		// Test template with sample data

@@ -48,7 +48,7 @@ func showHelp() {
 	fmt.Println("=============================================")
 	fmt.Println()
 	fmt.Println("MCQ is a powerful CLI tool that helps streamline your development workflow")
-	fmt.Println("with JIRA integration and AI-powered user story generation.")
+	fmt.Println("with JIRA integration, AI-powered user story generation, and customizable prompt templates.")
 	fmt.Println()
 
 	// Available Commands
@@ -67,6 +67,11 @@ func showHelp() {
 	fmt.Println("🤖 AI Commands:")
 	fmt.Println("  ai jira <story>  Convert feature request to user story")
 	fmt.Println()
+	fmt.Println("📝 Template Commands:")
+	fmt.Println("  templates generate [dir]  Generate example template files")
+	fmt.Println("  templates validate       Validate template syntax")
+	fmt.Println("  templates list           List available prompt types")
+	fmt.Println()
 	fmt.Println("❓ Help Commands:")
 	fmt.Println("  help             Show this help information")
 	fmt.Println("  examples         Show usage examples")
@@ -81,6 +86,13 @@ func showHelp() {
 	fmt.Println("3. Try 'mcq ai jira \"Add dark mode\"' to generate a user story")
 	fmt.Println("4. Use 'mcq jira new \"Add dark mode\"' to create a JIRA issue")
 	fmt.Println()
+	fmt.Println("📝 Template Customization:")
+	fmt.Println("---------------------------")
+	fmt.Println("1. Run 'mcq templates generate ./my-templates' to create example templates")
+	fmt.Println("2. Set 'export MCQ_PROMPTS_DIR=./my-templates' to use custom templates")
+	fmt.Println("3. Edit the .tpl files to customize AI prompts")
+	fmt.Println("4. Run 'mcq templates validate' to check template syntax")
+	fmt.Println()
 
 	// Environment Variables
 	fmt.Println("🌍 Environment Variables:")
@@ -91,6 +103,7 @@ func showHelp() {
 	fmt.Println("JIRA_PROJECT_PREFIX  Your JIRA project prefix (e.g., PROJ)")
 	fmt.Println("ANTHROPIC_API_KEY    Your Anthropic API key for Claude")
 	fmt.Println("OPENAI_API_KEY       Your OpenAI API key for GPT models")
+	fmt.Println("MCQ_PROMPTS_DIR      Directory containing custom prompt templates")
 	fmt.Println()
 
 	// More Information

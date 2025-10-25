@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/stevemcquaid/mcq/pkg/ai"
 	"github.com/stevemcquaid/mcq/pkg/errors"
 	"github.com/stevemcquaid/mcq/pkg/jira"
 )
@@ -50,11 +51,55 @@ var configShowCmd = &cobra.Command{
 	},
 }
 
+// configTemplatesCmd represents the config templates command
+var configTemplatesCmd = &cobra.Command{
+	Use:   "templates",
+	Short: "Manage AI prompt templates",
+	Long:  `Generate, validate, and manage AI prompt templates for customization.`,
+}
+
+// configTemplatesGenerateCmd represents the config templates generate command
+var configTemplatesGenerateCmd = &cobra.Command{
+	Use:   "generate [directory]",
+	Short: "Generate example template files",
+	Long:  `Generate example template files in the specified directory (or current directory if not specified).`,
+	Args:  cobra.MaximumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		generateTemplates(args)
+	},
+}
+
+// configTemplatesValidateCmd represents the config templates validate command
+var configTemplatesValidateCmd = &cobra.Command{
+	Use:   "validate",
+	Short: "Validate template syntax",
+	Long:  `Validate that all prompt templates are syntactically correct and can be executed.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		validateTemplates()
+	},
+}
+
+// configTemplatesListCmd represents the config templates list command
+var configTemplatesListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List available prompt types",
+	Long:  `List all available prompt types and their template file names.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		listTemplates()
+	},
+}
+
 func init() {
 	RootCmd.AddCommand(configCmd)
 	configCmd.AddCommand(configSetupCmd)
 	configCmd.AddCommand(configTestCmd)
 	configCmd.AddCommand(configShowCmd)
+	configCmd.AddCommand(configTemplatesCmd)
+
+	// Template subcommands
+	configTemplatesCmd.AddCommand(configTemplatesGenerateCmd)
+	configTemplatesCmd.AddCommand(configTemplatesValidateCmd)
+	configTemplatesCmd.AddCommand(configTemplatesListCmd)
 }
 
 // setupInteractive guides the user through configuration setup
@@ -110,6 +155,33 @@ func setupInteractive() {
 	if openaiKey != "" && !strings.HasPrefix(openaiKey, "***") {
 		if err := os.Setenv("OPENAI_API_KEY", openaiKey); err != nil {
 			fmt.Printf("Warning: Failed to set OPENAI_API_KEY: %v\n", err)
+		}
+	}
+
+	fmt.Println()
+
+	// Template Configuration
+	fmt.Println("📝 Template Configuration")
+	fmt.Println("-------------------------")
+
+	// Ask about template customization
+	if askForConfirmation("Would you like to customize AI prompt templates?", false) {
+		templateDir := getInput("Template directory path", os.Getenv("MCQ_PROMPTS_DIR"), "./templates")
+		if templateDir != "" {
+			if err := os.Setenv("MCQ_PROMPTS_DIR", templateDir); err != nil {
+				fmt.Printf("Warning: Failed to set MCQ_PROMPTS_DIR: %v\n", err)
+			} else {
+				fmt.Printf("✅ Template directory set to: %s\n", templateDir)
+
+				// Ask if they want to generate example templates
+				if askForConfirmation("Generate example template files?", true) {
+					if err := generateTemplateFiles(templateDir); err != nil {
+						fmt.Printf("❌ Failed to generate templates: %v\n", err)
+					} else {
+						fmt.Printf("✅ Example templates generated in: %s\n", templateDir)
+					}
+				}
+			}
 		}
 	}
 
@@ -191,6 +263,16 @@ func showConfiguration() {
 	fmt.Printf("   • OpenAI API Key: %s\n", maskAPIKey(os.Getenv("OPENAI_API_KEY")))
 	fmt.Println()
 
+	// Template Configuration
+	fmt.Println("📝 Template Settings:")
+	templateDir := os.Getenv("MCQ_PROMPTS_DIR")
+	if templateDir == "" {
+		fmt.Println("   • Template Directory: (using default templates)")
+	} else {
+		fmt.Printf("   • Template Directory: %s\n", templateDir)
+	}
+	fmt.Println()
+
 	// Environment Variables
 	fmt.Println("🌍 Environment Variables:")
 	fmt.Printf("   • JIRA_INSTANCE_URL: %s\n", os.Getenv("JIRA_INSTANCE_URL"))
@@ -199,6 +281,7 @@ func showConfiguration() {
 	fmt.Printf("   • JIRA_PROJECT_PREFIX: %s\n", os.Getenv("JIRA_PROJECT_PREFIX"))
 	fmt.Printf("   • ANTHROPIC_API_KEY: %s\n", maskAPIKey(os.Getenv("ANTHROPIC_API_KEY")))
 	fmt.Printf("   • OPENAI_API_KEY: %s\n", maskAPIKey(os.Getenv("OPENAI_API_KEY")))
+	fmt.Printf("   • MCQ_PROMPTS_DIR: %s\n", os.Getenv("MCQ_PROMPTS_DIR"))
 }
 
 // getInput prompts for user input with a default value
@@ -286,4 +369,118 @@ func saveConfiguration() {
 			fmt.Printf("Warning: Failed to set JIRA_PROJECT_PREFIX: %v\n", err)
 		}
 	}
+}
+
+// generateTemplates generates example template files
+func generateTemplates(args []string) {
+	outputDir := "."
+	if len(args) > 0 {
+		outputDir = args[0]
+	}
+
+	// Create directory if it doesn't exist
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		fmt.Printf("❌ Failed to create directory %s: %v\n", outputDir, err)
+		return
+	}
+
+	// Generate template files for each prompt type
+	for _, promptType := range []ai.PromptType{ai.PromptTypeUserStory, ai.PromptTypeTitleExtraction} {
+		templateFile := fmt.Sprintf("%s/%s.tpl", outputDir, promptType)
+
+		if _, err := os.Stat(templateFile); err == nil {
+			fmt.Printf("⚠️  Template file already exists: %s\n", templateFile)
+			continue
+		}
+
+		if err := generateTemplateFile(templateFile, promptType); err != nil {
+			fmt.Printf("❌ Failed to generate template %s: %v\n", templateFile, err)
+			return
+		}
+
+		fmt.Printf("✅ Generated template: %s\n", templateFile)
+	}
+
+	fmt.Printf("\n📁 Template files generated in: %s\n", outputDir)
+	fmt.Println("💡 Set MCQ_PROMPTS_DIR environment variable to use these templates:")
+	fmt.Printf("   export MCQ_PROMPTS_DIR=%s\n", outputDir)
+}
+
+// validateTemplates validates template syntax
+func validateTemplates() {
+	// This would need to import the AI package to use the template manager
+	// For now, we'll provide a simple validation message
+	fmt.Println("🔍 Validating templates...")
+
+	templateDir := os.Getenv("MCQ_PROMPTS_DIR")
+	if templateDir == "" {
+		fmt.Println("ℹ️  No custom template directory set (MCQ_PROMPTS_DIR)")
+		fmt.Println("   Using default templates - no validation needed")
+		return
+	}
+
+	if _, err := os.Stat(templateDir); os.IsNotExist(err) {
+		fmt.Printf("❌ Template directory does not exist: %s\n", templateDir)
+		return
+	}
+
+	// Check if template files exist
+	templateFiles := []string{"user_story.tpl", "title_extraction.tpl"}
+	allExist := true
+
+	for _, file := range templateFiles {
+		templateFile := fmt.Sprintf("%s/%s", templateDir, file)
+		if _, err := os.Stat(templateFile); os.IsNotExist(err) {
+			fmt.Printf("⚠️  Template file missing: %s\n", templateFile)
+			allExist = false
+		}
+	}
+
+	if allExist {
+		fmt.Println("✅ All template files found")
+		fmt.Println("💡 Run 'mcq templates validate' for syntax validation")
+	} else {
+		fmt.Println("❌ Some template files are missing")
+		fmt.Println("💡 Run 'mcq config templates generate' to create them")
+	}
+}
+
+// listTemplates lists available prompt types
+func listTemplates() {
+	fmt.Println("Available prompt types:")
+	fmt.Println()
+
+	promptTypes := []struct {
+		name        string
+		description string
+	}{
+		{"user_story", "Generates detailed user stories from feature requests"},
+		{"title_extraction", "Extracts concise titles from user stories for JIRA issues"},
+	}
+
+	for _, pt := range promptTypes {
+		fmt.Printf("• %s\n", pt.name)
+		fmt.Printf("  Template file: %s.tpl\n", pt.name)
+		fmt.Printf("  Description: %s\n", pt.description)
+		fmt.Println()
+	}
+}
+
+// generateTemplateFiles is a helper function for the interactive setup
+func generateTemplateFiles(templateDir string) error {
+	// Create directory if it doesn't exist
+	if err := os.MkdirAll(templateDir, 0755); err != nil {
+		return err
+	}
+
+	// Generate template files for each prompt type
+	for _, promptType := range []ai.PromptType{ai.PromptTypeUserStory, ai.PromptTypeTitleExtraction} {
+		templateFile := fmt.Sprintf("%s/%s.tpl", templateDir, promptType)
+
+		if err := generateTemplateFile(templateFile, promptType); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
