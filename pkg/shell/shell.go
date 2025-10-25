@@ -17,46 +17,67 @@ import (
 
 const ShellToUse = "sh"
 
-// @TODO - create different pretty printers without the runner command. and use them inside the prettyrun()
-func PrettyRun(command string) error {
-	greenColorWriter := colorwriter.NewPrefixWriter(os.Stdout, color.New(color.FgGreen))
-	defer greenColorWriter.Flush()
-	_, _ = fmt.Fprintf(greenColorWriter, "===> %s\n", command)
+// createFlushDefer creates a defer function that safely flushes a writer
+func createFlushDefer(writer io.Writer, writerName string) func() {
+	return func() {
+		if flushable, ok := writer.(interface{ Flush() error }); ok {
+			if err := flushable.Flush(); err != nil {
+				_, _ = fmt.Fprintf(os.Stderr, "Error flushing %s: %v\n", writerName, err)
+			}
+		}
+	}
+}
 
-	blueColorWriter := colorwriter.NewPrefixWriter(os.Stdout, color.New(color.FgCyan))
-	defer blueColorWriter.Flush()
-	redColorWriter := colorwriter.NewPrefixWriter(os.Stdout, color.New(color.FgRed))
-	defer redColorWriter.Flush()
+// setupWriters creates and configures all the color writers needed for PrettyRun
+func setupWriters() (greenWriter, blueWriter, redWriter, stdOutWriter, stdErrWriter io.Writer) {
+	greenWriter = colorwriter.NewPrefixWriter(os.Stdout, color.New(color.FgGreen))
+	blueWriter = colorwriter.NewPrefixWriter(os.Stdout, color.New(color.FgCyan))
+	redWriter = colorwriter.NewPrefixWriter(os.Stdout, color.New(color.FgRed))
 
-	stdOutWriter := textio.NewPrefixWriter(blueColorWriter, "||    ")
-	defer stdOutWriter.Flush()
+	stdOutWriter = textio.NewPrefixWriter(blueWriter, "||    ")
+	stdErrWriter = textio.NewPrefixWriter(redWriter, "||    ")
 
-	stdErrWriter := textio.NewPrefixWriter(redColorWriter, "||    ")
-	defer stdErrWriter.Flush()
+	return greenWriter, blueWriter, redWriter, stdOutWriter, stdErrWriter
+}
 
+// executeCommand runs the command and handles the output
+func executeCommand(command string, stdOutWriter, stdErrWriter io.Writer) error {
 	cmd := exec.Command(ShellToUse, "-c", command)
 
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = io.MultiWriter(stdOutWriter, &stdoutBuf)
 	cmd.Stderr = io.MultiWriter(stdErrWriter, &stderrBuf)
 
-	err := cmd.Run()
+	return cmd.Run()
+}
+
+// handleCommandError handles the case when command execution fails
+func handleCommandError(err error, redWriter, stdErrWriter io.Writer) error {
+	_, _ = fmt.Fprintln(redWriter, "------ cmd.Run() failed ------")
+	_, _ = fmt.Fprintln(stdErrWriter, err)
+	return err
+}
+
+// @TODO - create different pretty printers without the runner command. and use them inside the prettyrun()
+func PrettyRun(command string) error {
+	greenWriter, blueWriter, redWriter, stdOutWriter, stdErrWriter := setupWriters()
+
+	// Set up defer functions for flushing
+	defer createFlushDefer(greenWriter, "green color writer")()
+	defer createFlushDefer(blueWriter, "blue color writer")()
+	defer createFlushDefer(redWriter, "red color writer")()
+	defer createFlushDefer(stdOutWriter, "stdout writer")()
+	defer createFlushDefer(stdErrWriter, "stderr writer")()
+
+	// Print the command being executed
+	_, _ = fmt.Fprintf(greenWriter, "===> %s\n", command)
+
+	// Execute the command
+	err := executeCommand(command, stdOutWriter, stdErrWriter)
 	if err != nil {
-		fmt.Fprintln(redColorWriter, "------ cmd.Run() failed ------")
-		fmt.Fprintln(stdErrWriter, err)
-
-		return err
-
-		// outStr, errStr := string(stdoutBuf.Bytes()), string(stderrBuf.Bytes())
-		// if outStr != "" {
-		// 	fmt.Println("------ stdout ---")
-		// 	fmt.Println(outStr)
-		// }
-		// if errStr != "" {
-		// 	fmt.Println("------ stderr ---")
-		// 	fmt.Println(errStr)
-		// }
+		return handleCommandError(err, redWriter, stdErrWriter)
 	}
+
 	return nil
 }
 
