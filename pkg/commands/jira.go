@@ -77,11 +77,18 @@ func ShowJiraIssue(issueKey string) {
 func JiraNew(args []string, modelFlag string, verbosityLevel int, contextConfig ai.ContextConfig) error {
 	featureRequest := strings.Join(args, " ")
 
+	fmt.Printf("🔧 Starting JIRA issue creation for: %s\n", featureRequest)
+
 	// First, generate the user story using the existing AI functionality
+	fmt.Println("🤖 Generating user story...")
 	userStory, err := generateUserStoryForJira(featureRequest, modelFlag, verbosityLevel, contextConfig)
 	if err != nil {
-		return fmt.Errorf("failed to generate user story: %w", err)
+		userErr := errors.WrapError(err, "Failed to generate user story")
+		userErr.Display()
+		return userErr
 	}
+
+	fmt.Println("✅ User story generated successfully")
 
 	// Ask for confirmation before creating the Jira issue
 	fmt.Println("\n" + strings.Repeat("=", 60))
@@ -128,19 +135,23 @@ func generateUserStoryForJira(featureRequest string, modelFlag string, verbosity
 	logger.SetupLogger(verbosityLevel)
 	logger.LogBasic("Starting JiraNew", "feature_request", featureRequest)
 
+	fmt.Println("📁 Gathering repository context...")
 	// Gather repository context
 	repoContext := ai.GatherContextIfNeeded(contextConfig)
+	fmt.Println("✅ Context gathered")
 
+	fmt.Println("🤖 Selecting AI model...")
 	// Select and configure model
 	selectedModel, err := ai.SelectModel(modelFlag)
 	if err != nil {
 		return "", err
 	}
+	fmt.Printf("✅ Selected model: %s\n", selectedModel.Name)
 
 	// Generate user story
 	userStory, err := ai.GenerateUserStory(selectedModel, featureRequest, repoContext)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate user story: %w", err)
+		return "", errors.WrapError(err, "Failed to generate user story")
 	}
 
 	// Copy to clipboard (as requested)

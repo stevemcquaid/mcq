@@ -112,7 +112,20 @@ func interactiveModelSelection(anthropicAPIKey, openaiAPIKey string) (ModelConfi
 	var choice int
 	_, err := fmt.Scanln(&choice)
 	if err != nil {
-		return ModelConfig{}, fmt.Errorf("invalid input: %w", err)
+		fmt.Println("\n⚠️  Error reading input, using default model.")
+		fmt.Println("   This is normal in non-interactive environments.")
+		// Return a default model instead of error
+		if anthropicAPIKey != "" {
+			model := models["claude"]
+			model.APIKey = anthropicAPIKey
+			return model, nil
+		}
+		if openaiAPIKey != "" {
+			model := models["gpt-5"]
+			model.APIKey = openaiAPIKey
+			return model, nil
+		}
+		return ModelConfig{}, errors.ModelNotAvailableError
 	}
 
 	if choice < 1 || choice > len(modelOrder) {

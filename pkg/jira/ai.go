@@ -48,14 +48,12 @@ func (ae *AIExtractor) ExtractTitleWithAI(userStory, featureRequest string) (str
 
 // createTitleExtractionPrompt creates a focused prompt for title extraction
 func createTitleExtractionPrompt(userStory, featureRequest string) string {
-	return fmt.Sprintf(`Extract a concise, clear title (maximum 100 characters) for a Jira issue from the following user story. The title should be action-oriented and summarize the main goal or feature.
-
-User Story:
-%s
+	return fmt.Sprintf(`Create a new concise, clear title (maximum 100 characters) for a Jira issue from the following user story. The title should be action-oriented and summarize the main goal or feature.  Please provide ONLY the concise jira title, NOTHING ELSE. 
 
 Original Feature Request: %s
 
-Please provide only the title, nothing else.`, userStory, featureRequest)
+User Story: 
+%s`, featureRequest, userStory)
 }
 
 // cleanTitle cleans and truncates the title to fit JIRA requirements

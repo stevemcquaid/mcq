@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/sashabaranov/go-openai"
+	"github.com/stevemcquaid/mcq/pkg/errors"
 	"github.com/stevemcquaid/mcq/pkg/logger"
 )
 
@@ -27,7 +28,7 @@ func generateUserStoryOpenAI(apiKey, featureRequest, modelID string, repoContext
 
 	stream, err := client.CreateChatCompletionStream(ctx, req)
 	if err != nil {
-		return "", fmt.Errorf("failed to create streaming request: %w", err)
+		return "", errors.WrapError(err, "Failed to create streaming request")
 	}
 	defer func() {
 		if closeErr := stream.Close(); closeErr != nil {
@@ -88,7 +89,7 @@ func processOpenAIStream(stream *openai.ChatCompletionStream) (string, error) {
 				logger.LogBasic("Stream completed with EOF")
 				break
 			}
-			return "", fmt.Errorf("stream error: %w", err)
+			return "", errors.WrapError(err, "Stream error")
 		}
 
 		if len(response.Choices) > 0 && response.Choices[0].Delta.Content != "" {
@@ -102,7 +103,7 @@ func processOpenAIStream(stream *openai.ChatCompletionStream) (string, error) {
 	fmt.Println()
 	response := fullResponse.String()
 	if response == "" {
-		return "", fmt.Errorf("no content in response")
+		return "", errors.WrapError(fmt.Errorf("no content in response"), "Empty response from OpenAI")
 	}
 
 	return response, nil

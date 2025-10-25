@@ -403,7 +403,8 @@ func PromptForContext() ContextConfig {
 	var response string
 	_, err := fmt.Scanln(&response)
 	if err != nil {
-		fmt.Println("\nError reading input, skipping context gathering.")
+		fmt.Println("\n⚠️  Error reading input, skipping context gathering.")
+		fmt.Println("   This is normal in non-interactive environments.")
 		return ContextConfig{}
 	}
 

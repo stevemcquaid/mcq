@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -118,7 +120,11 @@ Examples:
 			contextConfig = ai.PromptForContext()
 		}
 
-		_ = commands.JiraNew(userStoryArgs, model, verbosity, contextConfig)
+		if err := commands.JiraNew(userStoryArgs, model, verbosity, contextConfig); err != nil {
+			// Error handling is done within JiraNew function
+			// Exit with error code 1 to indicate failure
+			os.Exit(1)
+		}
 	},
 }
 

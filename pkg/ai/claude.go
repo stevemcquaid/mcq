@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/stevemcquaid/mcq/pkg/errors"
 	"github.com/stevemcquaid/mcq/pkg/logger"
 )
 
@@ -23,7 +24,7 @@ func generateUserStoryClaude(apiKey, featureRequest string, repoContext *RepoCon
 
 	jsonData, err := json.Marshal(request)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal request: %w", err)
+		return "", errors.WrapError(err, "Failed to marshal request")
 	}
 
 	req, err := createClaudeHTTPRequest(apiKey, jsonData)
@@ -34,7 +35,7 @@ func generateUserStoryClaude(apiKey, featureRequest string, repoContext *RepoCon
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to make request: %w", err)
+		return "", errors.WrapError(err, "Failed to make request")
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
@@ -45,9 +46,9 @@ func generateUserStoryClaude(apiKey, featureRequest string, repoContext *RepoCon
 	if resp.StatusCode != http.StatusOK {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return "", fmt.Errorf("API request failed with status %d: failed to read response body: %w", resp.StatusCode, err)
+			return "", errors.WrapError(err, fmt.Sprintf("API request failed with status %d", resp.StatusCode))
 		}
-		return "", fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
+		return "", errors.WrapError(fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body)), "Claude API request failed")
 	}
 
 	logger.LogBasic("Claude API request successful, processing stream")
@@ -71,7 +72,7 @@ func createClaudeRequest(prompt string) AnthropicRequest {
 func createClaudeHTTPRequest(apiKey string, jsonData []byte) (*http.Request, error) {
 	req, err := http.NewRequest("POST", AnthropicAPIURL, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, errors.WrapError(err, "Failed to create request")
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -116,12 +117,12 @@ func processClaudeStream(body io.ReadCloser) (string, error) {
 
 	fmt.Println()
 	if err := scanner.Err(); err != nil {
-		return "", fmt.Errorf("error reading stream: %w", err)
+		return "", errors.WrapError(err, "Error reading stream")
 	}
 
 	response := fullResponse.String()
 	if response == "" {
-		return "", fmt.Errorf("no content in response")
+		return "", errors.WrapError(fmt.Errorf("no content in response"), "Empty response from Claude")
 	}
 
 	return response, nil
