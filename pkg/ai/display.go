@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/stevemcquaid/mcq/pkg/errors"
 	"github.com/stevemcquaid/mcq/pkg/logger"
 )
 
@@ -13,7 +14,13 @@ func displayAndCopyResult(userStory string) error {
 	fmt.Println("\n📋 Copying to clipboard...")
 
 	if err := copyToClipboard(userStory); err != nil {
-		return fmt.Errorf("failed to copy to clipboard: %w", err)
+		userErr := errors.WrapError(err, "Clipboard copy failed")
+		userErr.Display()
+		// Don't fail the entire operation if clipboard copy fails
+		fmt.Println("\n" + strings.Repeat("=", 60))
+		fmt.Println(userStory)
+		fmt.Println(strings.Repeat("=", 60))
+		return nil
 	}
 
 	fmt.Println("✅ User story generated and copied to clipboard!")

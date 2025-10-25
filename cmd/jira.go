@@ -17,8 +17,9 @@ var jiraCmd = &cobra.Command{
 
 // jiraShowCmd represents the jira show command
 var jiraShowCmd = &cobra.Command{
-	Use:   "show <issue-key>",
-	Short: "Display detailed information about a Jira issue",
+	Use:     "show <issue-key>",
+	Aliases: []string{"view", "display", "get"},
+	Short:   "Display detailed information about a Jira issue",
 	Long: `Show comprehensive details about a Jira issue including:
 - Basic fields (title, summary, description, status, assignee, sprint, parent, related tickets)
 - Comments (with author and timestamps) - you'll be prompted before displaying
@@ -40,8 +41,9 @@ Examples:
 
 // jiraNewCmd represents the jira new command
 var jiraNewCmd = &cobra.Command{
-	Use:   "new [flags] [--] <vague user story>",
-	Short: "Create a new Jira issue from a vague user story using AI",
+	Use:     "new [flags] [--] <vague user story>",
+	Aliases: []string{"create", "add"},
+	Short:   "Create a new Jira issue from a vague user story using AI",
 	Long: `Create a new Jira issue by converting a vague user story into a detailed user story using AI.
 
 This command will:

@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/stevemcquaid/mcq/pkg/errors"
 	"github.com/stevemcquaid/mcq/pkg/logger"
 )
 
@@ -19,11 +20,19 @@ func SelectModel(modelFlag string) (ModelConfig, error) {
 
 	// If model is explicitly specified, validate and return it
 	if modelFlag != "" {
-		return selectExplicitModel(modelFlag, anthropicAPIKey, openaiAPIKey)
+		model, err := selectExplicitModel(modelFlag, anthropicAPIKey, openaiAPIKey)
+		if err != nil {
+			return ModelConfig{}, errors.WrapError(err, "Failed to select AI model")
+		}
+		return model, nil
 	}
 
 	// Auto-detect based on available API keys
-	return selectModelByAvailability(anthropicAPIKey, openaiAPIKey)
+	model, err := selectModelByAvailability(anthropicAPIKey, openaiAPIKey)
+	if err != nil {
+		return ModelConfig{}, errors.WrapError(err, "Failed to auto-detect AI model")
+	}
+	return model, nil
 }
 
 // maskAPIKey returns a masked version of the API key for logging
@@ -45,12 +54,12 @@ func selectExplicitModel(modelFlag, anthropicAPIKey, openaiAPIKey string) (Model
 	switch model.Provider {
 	case "anthropic":
 		if anthropicAPIKey == "" {
-			return ModelConfig{}, fmt.Errorf("ANTHROPIC_API_KEY is required for Claude model")
+			return ModelConfig{}, errors.ModelNotAvailableError
 		}
 		model.APIKey = anthropicAPIKey
 	case "openai":
 		if openaiAPIKey == "" {
-			return ModelConfig{}, fmt.Errorf("OPENAI_API_KEY is required for %s model", model.Name)
+			return ModelConfig{}, errors.ModelNotAvailableError
 		}
 		model.APIKey = openaiAPIKey
 	}
@@ -65,7 +74,7 @@ func selectModelByAvailability(anthropicAPIKey, openaiAPIKey string) (ModelConfi
 	hasOpenAI := openaiAPIKey != ""
 
 	if !hasAnthropic && !hasOpenAI {
-		return ModelConfig{}, fmt.Errorf("no API keys found. Please set either ANTHROPIC_API_KEY or OPENAI_API_KEY")
+		return ModelConfig{}, errors.ModelNotAvailableError
 	}
 
 	if hasAnthropic && hasOpenAI {

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/stevemcquaid/mcq/pkg/ai"
+	"github.com/stevemcquaid/mcq/pkg/errors"
 	"github.com/stevemcquaid/mcq/pkg/jira"
 	"github.com/stevemcquaid/mcq/pkg/logger"
 )
@@ -60,12 +61,14 @@ func copyToClipboard(text string) error {
 func ShowJiraIssue(issueKey string) {
 	manager, err := jira.NewManager()
 	if err != nil {
-		fmt.Printf("❌ Failed to create Jira manager: %v\n", err)
+		userErr := errors.WrapError(err, "Failed to create Jira manager")
+		userErr.Display()
 		return
 	}
 
 	if err := manager.ShowIssue(issueKey); err != nil {
-		fmt.Printf("❌ Failed to show issue: %v\n", err)
+		userErr := errors.WrapError(err, "Failed to show issue")
+		userErr.Display()
 		return
 	}
 }
@@ -95,7 +98,9 @@ func JiraNew(args []string, modelFlag string, verbosityLevel int, contextConfig 
 	// Create Jira manager
 	manager, err := jira.NewManager()
 	if err != nil {
-		return fmt.Errorf("failed to create Jira manager: %w", err)
+		userErr := errors.WrapError(err, "Failed to create Jira manager")
+		userErr.Display()
+		return userErr
 	}
 
 	// Set up AI extractor
@@ -105,7 +110,9 @@ func JiraNew(args []string, modelFlag string, verbosityLevel int, contextConfig 
 	// Create the Jira issue
 	issueKey, err := manager.CreateIssue(userStory, featureRequest)
 	if err != nil {
-		return fmt.Errorf("failed to create Jira issue: %w", err)
+		userErr := errors.WrapError(err, "Failed to create Jira issue")
+		userErr.Display()
+		return userErr
 	}
 
 	// Display success message
@@ -140,7 +147,8 @@ func generateUserStoryForJira(featureRequest string, modelFlag string, verbosity
 	if err := copyToClipboard(userStory); err != nil {
 		logger.LogError("clipboard copy", err)
 		// Don't fail the entire operation if clipboard copy fails
-		fmt.Printf("⚠️  Warning: Could not copy to clipboard: %v\n", err)
+		userErr := errors.WrapError(err, "Clipboard copy failed")
+		userErr.Display()
 	} else {
 		fmt.Println("📋 User story copied to clipboard!")
 	}

@@ -8,6 +8,8 @@ import (
 
 	"github.com/andygrunwald/go-jira"
 	"github.com/spf13/viper"
+
+	"github.com/stevemcquaid/mcq/pkg/errors"
 )
 
 // Manager provides a simplified interface for JIRA operations
@@ -20,7 +22,7 @@ type Manager struct {
 func NewManager() (*Manager, error) {
 	client, err := NewClient()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Jira client: %w", err)
+		return nil, errors.WrapError(err, "Failed to create Jira client")
 	}
 
 	return &Manager{
@@ -44,7 +46,7 @@ func (m *Manager) ShowIssue(issueKey string) error {
 	normalizedKey := normalizeIssueKey(issueKey)
 	issue, err := m.client.GetIssue(normalizedKey)
 	if err != nil {
-		return fmt.Errorf("failed to fetch issue %s: %w", normalizedKey, err)
+		return errors.WrapError(err, fmt.Sprintf("Failed to fetch issue %s", normalizedKey))
 	}
 
 	m.displayIssue(issue)
@@ -67,7 +69,7 @@ func (m *Manager) CreateIssue(userStory, featureRequest string) (string, error) 
 	// Extract title using AI with user approval
 	title, err := m.extractTitle(userStory, featureRequest)
 	if err != nil {
-		return "", fmt.Errorf("failed to extract title: %w", err)
+		return "", errors.WrapError(err, "Failed to extract title")
 	}
 
 	// Create the issue
@@ -82,7 +84,7 @@ func (m *Manager) CreateIssue(userStory, featureRequest string) (string, error) 
 
 	issueKey, err := m.client.CreateIssue(issue)
 	if err != nil {
-		return "", fmt.Errorf("failed to create issue: %w", err)
+		return "", errors.WrapError(err, "Failed to create issue")
 	}
 
 	return issueKey, nil

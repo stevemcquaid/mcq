@@ -8,6 +8,8 @@ import (
 
 	"github.com/andygrunwald/go-jira"
 	"github.com/spf13/viper"
+
+	"github.com/stevemcquaid/mcq/pkg/errors"
 )
 
 // Client provides a simple interface for JIRA API operations
@@ -20,12 +22,12 @@ type Client struct {
 func NewClient() (*Client, error) {
 	config, err := getConfig()
 	if err != nil {
-		return nil, fmt.Errorf("configuration error: %w", err)
+		return nil, errors.WrapError(err, "JIRA configuration error")
 	}
 
 	client, err := createClient(config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Jira client: %w", err)
+		return nil, errors.WrapError(err, "Failed to create Jira client")
 	}
 
 	return &Client{
@@ -38,7 +40,7 @@ func NewClient() (*Client, error) {
 func (c *Client) GetIssue(issueKey string) (*Issue, error) {
 	jiraIssue, _, err := c.client.Issue.Get(issueKey, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get issue: %w", err)
+		return nil, errors.WrapError(err, "Failed to get issue")
 	}
 
 	issue := c.convertJiraIssue(jiraIssue)
@@ -46,7 +48,8 @@ func (c *Client) GetIssue(issueKey string) (*Issue, error) {
 	// Fetch comments
 	comments, err := c.GetComments(issueKey)
 	if err != nil {
-		fmt.Printf("⚠️  Warning: Could not fetch comments: %v\n", err)
+		userErr := errors.WrapError(err, "Could not fetch comments")
+		userErr.Display()
 	} else {
 		issue.Comments = comments
 	}
@@ -98,7 +101,7 @@ func (c *Client) GetComments(issueKey string) ([]Comment, error) {
 func (c *Client) CreateIssue(issue *jira.Issue) (string, error) {
 	createdIssue, _, err := c.client.Issue.Create(issue)
 	if err != nil {
-		return "", fmt.Errorf("failed to create issue: %w", err)
+		return "", errors.WrapError(err, "Failed to create issue")
 	}
 
 	return createdIssue.Key, nil
@@ -174,11 +177,11 @@ func getConfig() (*Config, error) {
 	token := viper.GetString("jira.token")
 
 	if url == "" {
-		return nil, fmt.Errorf("jira URL not configured. Set JIRA_INSTANCE_URL environment variable or use --url flag")
+		return nil, errors.JiraConfigError
 	}
 
 	if username == "" {
-		return nil, fmt.Errorf("jira username not configured. Set JIRA_USERNAME environment variable or use --username flag")
+		return nil, errors.JiraConfigError
 	}
 
 	// Use API token as password if provided
@@ -187,7 +190,7 @@ func getConfig() (*Config, error) {
 	}
 
 	if password == "" {
-		return nil, fmt.Errorf("jira password/token not configured. Set JIRA_PASSWORD or JIRA_API_TOKEN environment variable")
+		return nil, errors.JiraConfigError
 	}
 
 	return &Config{
@@ -206,7 +209,7 @@ func createClient(config *Config) (*jira.Client, error) {
 
 	client, err := jira.NewClient(transport.Client(), config.URL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Jira client: %w", err)
+		return nil, errors.WrapError(err, "Failed to create Jira client")
 	}
 
 	return client, nil

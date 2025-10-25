@@ -1,9 +1,9 @@
 package ai
 
 import (
-	"fmt"
 	"strings"
 
+	"github.com/stevemcquaid/mcq/pkg/errors"
 	"github.com/stevemcquaid/mcq/pkg/logger"
 )
 
@@ -20,13 +20,17 @@ func AIJira(args []string, modelFlag string, verbosityLevel int, contextConfig C
 	// Select and configure model
 	selectedModel, err := SelectModel(modelFlag)
 	if err != nil {
-		return err
+		userErr := errors.WrapError(err, "Failed to select AI model")
+		userErr.Display()
+		return userErr
 	}
 
 	// Generate user story
 	userStory, err := GenerateUserStory(selectedModel, featureRequest, repoContext)
 	if err != nil {
-		return fmt.Errorf("failed to generate user story: %w", err)
+		userErr := errors.WrapError(err, "Failed to generate user story")
+		userErr.Display()
+		return userErr
 	}
 
 	// Display and copy result

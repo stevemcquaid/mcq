@@ -12,8 +12,9 @@ var aiCmd = &cobra.Command{
 }
 
 var aiJiraCmd = &cobra.Command{
-	Use:   "jira [feature request]",
-	Short: "Convert vague feature request to user story",
+	Use:     "jira [feature request]",
+	Aliases: []string{"story", "generate"},
+	Short:   "Convert vague feature request to user story",
 	Long: `Convert a vague feature request into a detailed user story and copy it to clipboard.
 
 The command will ask if you want to include repository context to improve the user story.
