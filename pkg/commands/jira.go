@@ -418,3 +418,221 @@ func displayIssue(issue *Issue) {
 
 	fmt.Println(strings.Repeat("=", 50))
 }
+
+// ============================================================================
+// JIRA NEW COMMAND FUNCTIONS
+// ============================================================================
+
+// JiraNew creates a new Jira issue from a vague user story using AI
+func JiraNew(args []string, modelFlag string, verbosityLevel int, contextConfig ContextConfig) error {
+	featureRequest := strings.Join(args, " ")
+
+	// First, generate the user story using the existing AI functionality
+	userStory, err := generateUserStoryForJira(featureRequest, modelFlag, verbosityLevel, contextConfig)
+	if err != nil {
+		return fmt.Errorf("failed to generate user story: %w", err)
+	}
+
+	// Ask for confirmation before creating the Jira issue
+	fmt.Println("\n" + strings.Repeat("=", 60))
+	fmt.Println("Generated User Story:")
+	fmt.Println(strings.Repeat("=", 60))
+	fmt.Println(userStory)
+	fmt.Println(strings.Repeat("=", 60))
+
+	if !askForConfirmation("\nCreate Jira issue with this content?", false) {
+		fmt.Println("Jira issue creation cancelled.")
+		return nil
+	}
+
+	// Create the Jira issue
+	issueKey, err := createJiraIssue(userStory, featureRequest)
+	if err != nil {
+		return fmt.Errorf("failed to create Jira issue: %w", err)
+	}
+
+	// Display success message
+	fmt.Printf("\n✅ Jira issue created successfully: %s\n", issueKey)
+	fmt.Printf("🔗 You can view it at: %s/browse/%s\n", getJiraBaseURL(), issueKey)
+
+	return nil
+}
+
+// generateUserStoryForJira generates a user story using AI and returns it without copying to clipboard
+func generateUserStoryForJira(featureRequest string, modelFlag string, verbosityLevel int, contextConfig ContextConfig) (string, error) {
+	// Set up logger
+	SetupLogger(verbosityLevel)
+	logBasic("Starting JiraNew", "feature_request", featureRequest)
+
+	// Gather repository context
+	repoContext := GatherContextIfNeeded(contextConfig)
+
+	// Select and configure model
+	selectedModel, err := SelectModel(modelFlag)
+	if err != nil {
+		return "", err
+	}
+
+	// Generate user story
+	userStory, err := GenerateUserStory(selectedModel, featureRequest, repoContext)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate user story: %w", err)
+	}
+
+	// Copy to clipboard (as requested)
+	if err := copyToClipboard(userStory); err != nil {
+		logError("clipboard copy", err)
+		// Don't fail the entire operation if clipboard copy fails
+		fmt.Printf("⚠️  Warning: Could not copy to clipboard: %v\n", err)
+	} else {
+		fmt.Println("📋 User story copied to clipboard!")
+	}
+
+	return userStory, nil
+}
+
+// createJiraIssue creates a new Jira issue with the provided content
+func createJiraIssue(userStory, featureRequest string) (string, error) {
+	config, err := getConfig()
+	if err != nil {
+		return "", fmt.Errorf("configuration error: %w", err)
+	}
+
+	// Get project prefix from environment
+	projectPrefix := viper.GetString("jira.project_prefix")
+	if projectPrefix == "" {
+		return "", fmt.Errorf("JIRA_PROJECT_PREFIX environment variable is required")
+	}
+
+	client, err := createClient(config)
+	if err != nil {
+		return "", fmt.Errorf("failed to create Jira client: %w", err)
+	}
+
+	// Extract title from the user story (first line or first sentence)
+	title := extractTitleFromUserStory(userStory, featureRequest)
+
+	// Convert markdown-style formatting to Jira markup
+	formattedDescription := convertToJiraMarkup(userStory)
+
+	// Create the issue
+	issue := &jira.Issue{
+		Fields: &jira.IssueFields{
+			Project:     jira.Project{Key: projectPrefix},
+			Type:        jira.IssueType{Name: "Story"}, // Default to Story
+			Summary:     title,
+			Description: formattedDescription,
+		},
+	}
+
+	createdIssue, _, err := client.Issue.Create(issue)
+	if err != nil {
+		return "", fmt.Errorf("failed to create issue: %w", err)
+	}
+
+	return createdIssue.Key, nil
+}
+
+// extractTitleFromUserStory extracts a suitable title from the user story
+func extractTitleFromUserStory(userStory, featureRequest string) string {
+	// Try to find the main user story line (starts with "As a")
+	lines := strings.Split(userStory, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "As a") {
+			// Extract the goal part from "As a [user], I want [goal] so that [benefit]"
+			parts := strings.Split(line, "I want ")
+			if len(parts) > 1 {
+				goalPart := strings.Split(parts[1], " so that")[0]
+				return strings.TrimSpace(goalPart)
+			}
+		}
+	}
+
+	// Fallback to the original feature request, cleaned up
+	title := strings.TrimSpace(featureRequest)
+	if len(title) > 100 {
+		title = title[:97] + "..."
+	}
+	return title
+}
+
+// getJiraBaseURL returns the base URL for the Jira instance
+func getJiraBaseURL() string {
+	config, err := getConfig()
+	if err != nil {
+		return "https://your-jira-instance.com" // fallback
+	}
+	return config.URL
+}
+
+// convertToJiraMarkup converts markdown-style text to Jira markup
+func convertToJiraMarkup(text string) string {
+	lines := strings.Split(text, "\n")
+	var result []string
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			result = append(result, "")
+			continue
+		}
+
+		// Convert bullet points
+		if strings.HasPrefix(line, "- ") {
+			// Main bullet point
+			content := strings.TrimSpace(strings.TrimPrefix(line, "- "))
+			result = append(result, "* "+content)
+		} else if strings.HasPrefix(line, "  - ") {
+			// Sub bullet point (indented)
+			content := strings.TrimSpace(strings.TrimPrefix(line, "  - "))
+			result = append(result, "** "+content)
+		} else if strings.HasPrefix(line, "    - ") {
+			// Sub-sub bullet point (double indented)
+			content := strings.TrimSpace(strings.TrimPrefix(line, "    - "))
+			result = append(result, "*** "+content)
+		} else if strings.HasPrefix(line, "1. ") {
+			// Numbered list
+			content := strings.TrimSpace(strings.TrimPrefix(line, "1. "))
+			result = append(result, "# "+content)
+		} else if strings.HasPrefix(line, "  1. ") {
+			// Indented numbered list
+			content := strings.TrimSpace(strings.TrimPrefix(line, "  1. "))
+			result = append(result, "## "+content)
+		} else if strings.HasPrefix(line, "## ") {
+			// H2 heading
+			content := strings.TrimSpace(strings.TrimPrefix(line, "## "))
+			result = append(result, "h2. "+content)
+		} else if strings.HasPrefix(line, "### ") {
+			// H3 heading
+			content := strings.TrimSpace(strings.TrimPrefix(line, "### "))
+			result = append(result, "h3. "+content)
+		} else if strings.HasPrefix(line, "**") && strings.HasSuffix(line, "**") {
+			// Bold text
+			content := strings.TrimSpace(strings.TrimPrefix(strings.TrimSuffix(line, "**"), "**"))
+			result = append(result, "*"+content+"*")
+		} else if strings.HasPrefix(line, "*") && strings.HasSuffix(line, "*") && !strings.HasPrefix(line, "**") {
+			// Italic text
+			content := strings.TrimSpace(strings.TrimPrefix(strings.TrimSuffix(line, "*"), "*"))
+			result = append(result, "_"+content+"_")
+		} else if strings.HasPrefix(line, "```") {
+			// Code block start/end
+			if strings.HasPrefix(line, "```") && len(line) == 3 {
+				result = append(result, "{code}")
+			} else if strings.HasPrefix(line, "```") && len(line) > 3 {
+				// Code block with language
+				lang := strings.TrimSpace(strings.TrimPrefix(line, "```"))
+				result = append(result, "{code:"+lang+"}")
+			}
+		} else if strings.HasPrefix(line, "`") && strings.HasSuffix(line, "`") {
+			// Inline code
+			content := strings.TrimSpace(strings.TrimPrefix(strings.TrimSuffix(line, "`"), "`"))
+			result = append(result, "{{"+content+"}}")
+		} else {
+			// Regular text
+			result = append(result, line)
+		}
+	}
+
+	return strings.Join(result, "\n")
+}

@@ -145,8 +145,8 @@ var modelOrder = []string{"claude", "gpt-4o", "gpt-5", "gpt-5-mini", "gpt-5-nano
 // LOGGING FUNCTIONS
 // ============================================================================
 
-// setupLogger configures the logger based on verbosity level
-func setupLogger(verbosityLevel int) {
+// SetupLogger configures the logger based on verbosity level
+func SetupLogger(verbosityLevel int) {
 	var level slog.Level
 	switch verbosityLevel {
 	case 0:
@@ -208,22 +208,22 @@ func logError(operation string, err error) {
 
 // AIJira converts a vague feature request to a user story and copies it to clipboard
 func AIJira(args []string, modelFlag string, verbosityLevel int, contextConfig ContextConfig) error {
-	setupLogger(verbosityLevel)
+	SetupLogger(verbosityLevel)
 
 	featureRequest := strings.Join(args, " ")
 	logBasic("Starting AIJira", "feature_request", featureRequest)
 
 	// Gather repository context
-	repoContext := gatherContextIfNeeded(contextConfig)
+	repoContext := GatherContextIfNeeded(contextConfig)
 
 	// Select and configure model
-	selectedModel, err := selectModel(modelFlag)
+	selectedModel, err := SelectModel(modelFlag)
 	if err != nil {
 		return err
 	}
 
 	// Generate user story
-	userStory, err := generateUserStory(selectedModel, featureRequest, repoContext)
+	userStory, err := GenerateUserStory(selectedModel, featureRequest, repoContext)
 	if err != nil {
 		return fmt.Errorf("failed to generate user story: %w", err)
 	}
@@ -236,8 +236,8 @@ func AIJira(args []string, modelFlag string, verbosityLevel int, contextConfig C
 // CONTEXT GATHERING
 // ============================================================================
 
-// gatherContextIfNeeded gathers repository context if any context options are enabled
-func gatherContextIfNeeded(config ContextConfig) *RepoContext {
+// GatherContextIfNeeded gathers repository context if any context options are enabled
+func GatherContextIfNeeded(config ContextConfig) *RepoContext {
 	if !shouldGatherContext(config) {
 		return nil
 	}
@@ -657,8 +657,8 @@ func PromptForContext() ContextConfig {
 // MODEL SELECTION
 // ============================================================================
 
-// selectModel determines which AI model to use
-func selectModel(modelFlag string) (ModelConfig, error) {
+// SelectModel determines which AI model to use
+func SelectModel(modelFlag string) (ModelConfig, error) {
 	anthropicAPIKey := os.Getenv("ANTHROPIC_API_KEY")
 	openaiAPIKey := os.Getenv("OPENAI_API_KEY")
 
@@ -790,8 +790,8 @@ func capitalize(s string) string {
 // USER STORY GENERATION
 // ============================================================================
 
-// generateUserStory generates a user story using the specified model
-func generateUserStory(model ModelConfig, featureRequest string, repoContext *RepoContext) (string, error) {
+// GenerateUserStory generates a user story using the specified model
+func GenerateUserStory(model ModelConfig, featureRequest string, repoContext *RepoContext) (string, error) {
 	showProgress(model, featureRequest)
 
 	if model.Provider == "anthropic" {

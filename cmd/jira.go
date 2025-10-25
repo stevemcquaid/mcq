@@ -37,9 +37,92 @@ Examples:
 	},
 }
 
+// jiraNewCmd represents the jira new command
+var jiraNewCmd = &cobra.Command{
+	Use:   "new [flags] [--] <vague user story>",
+	Short: "Create a new Jira issue from a vague user story using AI",
+	Long: `Create a new Jira issue by converting a vague user story into a detailed user story using AI.
+
+This command will:
+1. Generate a detailed user story using AI (same as 'mcq ai jira')
+2. Ask for confirmation before creating the Jira issue
+3. Create a new Jira issue with the generated content as description
+4. Copy the generated user story to clipboard
+
+The issue will be created in the project specified by JIRA_PROJECT_PREFIX environment variable.
+
+You can provide the user story in two ways:
+1. Quoted: mcq jira new "Add dark mode to the application"
+2. Unquoted with --: mcq jira new -- Add dark mode to the application
+
+Examples:
+  mcq jira new "Add dark mode to the application"
+  mcq jira new -- Add dark mode to the application
+  mcq jira new -v 8 "install/upgrade via homebrew"
+  mcq jira new -v 8 -- install/upgrade via homebrew
+  mcq jira new --model claude -- Improve user login process`,
+	Args: cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		// Check if -- is present in the arguments
+		doubleDashIndex := -1
+		for i, arg := range args {
+			if arg == "--" {
+				doubleDashIndex = i
+				break
+			}
+		}
+
+		var userStoryArgs []string
+		if doubleDashIndex >= 0 {
+			// -- syntax: everything after -- is the user story
+			userStoryArgs = args[doubleDashIndex+1:]
+			if len(userStoryArgs) == 0 {
+				userStoryArgs = []string{""} // Empty user story
+			}
+		} else {
+			// No -- found, treat all args as the user story (quoted syntax)
+			userStoryArgs = args
+		}
+
+		// Get flags normally since we're not using DisableFlagParsing
+		model, _ := cmd.Flags().GetString("model")
+		verbosity, _ := cmd.Flags().GetInt("verbosity")
+		autoDetect, _ := cmd.Flags().GetBool("auto-context")
+		includeReadme, _ := cmd.Flags().GetBool("include-readme")
+		includeGoMod, _ := cmd.Flags().GetBool("include-go-mod")
+		includeCommits, _ := cmd.Flags().GetBool("include-commits")
+		includeStructure, _ := cmd.Flags().GetBool("include-structure")
+		includeConfigs, _ := cmd.Flags().GetBool("include-configs")
+		maxCommits, _ := cmd.Flags().GetInt("max-commits")
+		noContext, _ := cmd.Flags().GetBool("no-context")
+
+		// Determine context configuration
+		var contextConfig commands.ContextConfig
+		if noContext {
+			contextConfig = commands.ContextConfig{}
+		} else if autoDetect || includeReadme || includeGoMod || includeCommits || includeStructure || includeConfigs {
+			contextConfig = commands.ContextConfig{
+				AutoDetect:       autoDetect,
+				IncludeReadme:    includeReadme,
+				IncludeGoMod:     includeGoMod,
+				IncludeCommits:   includeCommits,
+				IncludeStructure: includeStructure,
+				IncludeConfigs:   includeConfigs,
+				MaxCommits:       maxCommits,
+				MaxFileSize:      50 * 1024,
+			}
+		} else {
+			contextConfig = commands.PromptForContext()
+		}
+
+		_ = commands.JiraNew(userStoryArgs, model, verbosity, contextConfig)
+	},
+}
+
 func init() {
 	RootCmd.AddCommand(jiraCmd)
 	jiraCmd.AddCommand(jiraShowCmd)
+	jiraCmd.AddCommand(jiraNewCmd)
 
 	// Jira configuration
 	jiraCmd.PersistentFlags().String("url", "", "Jira instance URL (can also be set via JIRA_INSTANCE_URL env var)")
@@ -47,6 +130,18 @@ func init() {
 	jiraCmd.PersistentFlags().String("username", "", "Jira username (for basic auth, can also be set via JIRA_USERNAME env var)")
 	jiraCmd.PersistentFlags().String("password", "", "Jira password (for basic auth, can also be set via JIRA_PASSWORD env var)")
 	jiraCmd.PersistentFlags().String("project-prefix", "", "Jira project prefix (can also be set via JIRA_PROJECT_PREFIX env var)")
+
+	// AI flags for jira new command (for help display)
+	jiraNewCmd.Flags().StringP("model", "m", "", "AI model to use: 'claude', 'gpt-4o', 'gpt-5', 'gpt-5-mini', or 'gpt-5-nano' (auto-detected if not specified)")
+	jiraNewCmd.Flags().IntP("verbosity", "v", 0, "Set verbosity level: 0=off, 1=basic, 2=detailed, 3=verbose (use -v 8, not -v8)")
+	jiraNewCmd.Flags().Bool("auto-context", false, "Automatically detect and include relevant repository context")
+	jiraNewCmd.Flags().Bool("include-readme", false, "Include README content in context")
+	jiraNewCmd.Flags().Bool("include-go-mod", false, "Include go.mod information in context")
+	jiraNewCmd.Flags().Bool("include-commits", false, "Include recent commit messages in context")
+	jiraNewCmd.Flags().Bool("include-structure", false, "Include directory structure in context")
+	jiraNewCmd.Flags().Bool("include-configs", false, "Include configuration files in context")
+	jiraNewCmd.Flags().Int("max-commits", 10, "Maximum number of recent commits to include")
+	jiraNewCmd.Flags().Bool("no-context", false, "Skip context gathering entirely")
 
 	// Bind flags to viper
 	_ = viper.BindPFlag("jira.url", jiraCmd.PersistentFlags().Lookup("url"))
