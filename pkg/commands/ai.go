@@ -452,10 +452,10 @@ func addToStructure(structure *strings.Builder, path string, info os.FileInfo) {
 
 	if info.IsDir() {
 		if depth < 3 { // Limit depth to avoid too much detail
-			structure.WriteString(fmt.Sprintf("%s%s/\n", indent, info.Name()))
+			fmt.Fprintf(structure, "%s%s/\n", indent, info.Name())
 		}
 	} else if isImportantFile(path) {
-		structure.WriteString(fmt.Sprintf("%s%s\n", indent, info.Name()))
+		fmt.Fprintf(structure, "%s%s\n", indent, info.Name())
 	}
 }
 
@@ -691,12 +691,13 @@ func selectExplicitModel(modelFlag, anthropicAPIKey, openaiAPIKey string) (Model
 	}
 
 	// Set API key based on provider
-	if model.Provider == "anthropic" {
+	switch model.Provider {
+	case "anthropic":
 		if anthropicAPIKey == "" {
 			return ModelConfig{}, fmt.Errorf("ANTHROPIC_API_KEY is required for Claude model")
 		}
 		model.APIKey = anthropicAPIKey
-	} else if model.Provider == "openai" {
+	case "openai":
 		if openaiAPIKey == "" {
 			return ModelConfig{}, fmt.Errorf("OPENAI_API_KEY is required for %s model", model.Name)
 		}

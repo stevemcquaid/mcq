@@ -1,3 +1,6 @@
+// Package commands provides Jira integration functionality for the mcq CLI tool.
+// This file contains the core Jira API client, issue fetching, and display logic.
+// Text formatting and conversion logic is handled in jira_formatter.go.
 package commands
 
 import (
@@ -5,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -16,43 +18,45 @@ import (
 
 // Config holds Jira connection configuration
 type Config struct {
-	URL      string
-	Username string
-	Password string
+	URL      string // Jira instance URL
+	Username string // Username for authentication
+	Password string // Password or API token for authentication
 }
 
-// Issue represents a Jira issue for display
+// Issue represents a Jira issue for display with all relevant fields
 type Issue struct {
-	Key         string
-	Summary     string
-	Description string
-	Status      string
-	Assignee    string
-	Reporter    string
-	Priority    string
-	Type        string
-	Sprint      string
-	Parent      string
-	Labels      []string
-	Components  []string
-	FixVersions []string
-	Created     time.Time
-	Updated     time.Time
-	Comments    []Comment
+	Key         string    // Issue key (e.g., "PROJ-123")
+	Summary     string    // Issue title/summary
+	Description string    // Issue description
+	Status      string    // Current status
+	Assignee    string    // Assigned user
+	Reporter    string    // User who created the issue
+	Priority    string    // Issue priority
+	Type        string    // Issue type (Bug, Story, etc.)
+	Sprint      string    // Sprint name if assigned
+	Parent      string    // Parent issue key for subtasks
+	Labels      []string  // Issue labels
+	Components  []string  // Project components
+	FixVersions []string  // Fix versions
+	Created     time.Time // Creation timestamp
+	Updated     time.Time // Last update timestamp
+	Comments    []Comment // Issue comments
 }
 
-// Comment represents a Jira comment
+// Comment represents a Jira comment with metadata
 type Comment struct {
-	Author  string
-	Body    string
-	Created time.Time
-	Updated time.Time
+	Author  string    // Comment author
+	Body    string    // Comment content
+	Created time.Time // Comment creation time
+	Updated time.Time // Comment last update time
 }
 
-// UserCache holds a simple cache for resolved usernames
-var userCache = make(map[string]string)
+// Global text formatter instance
+var textFormatter = NewTextFormatter()
 
-// askForConfirmation asks the user for confirmation with a default value
+// askForConfirmation prompts the user for confirmation with a default value.
+// If defaultNo is true, the default is "no" (user can press Enter for no).
+// If defaultNo is false, the default is "yes" (user can press Enter for yes).
 func askForConfirmation(prompt string, defaultNo bool) bool {
 	reader := bufio.NewReader(os.Stdin)
 
@@ -77,7 +81,8 @@ func askForConfirmation(prompt string, defaultNo bool) bool {
 	return response == "y" || response == "yes"
 }
 
-// getConfig retrieves Jira configuration from viper
+// getConfig retrieves Jira configuration from viper and environment variables.
+// Returns an error if required configuration is missing.
 func getConfig() (*Config, error) {
 	url := viper.GetString("jira.url")
 	username := viper.GetString("jira.username")
@@ -108,7 +113,7 @@ func getConfig() (*Config, error) {
 	}, nil
 }
 
-// createClient creates a Jira client with basic authentication
+// createClient creates a Jira client with basic authentication using the provided config.
 func createClient(config *Config) (*jira.Client, error) {
 	transport := jira.BasicAuthTransport{
 		Username: config.Username,
@@ -123,7 +128,9 @@ func createClient(config *Config) (*jira.Client, error) {
 	return client, nil
 }
 
-// normalizeIssueKey adds project prefix if the issue key is just a number
+// normalizeIssueKey adds project prefix if the issue key is just a number.
+// If JIRA_PROJECT_PREFIX is set, "123" becomes "PROJ-123".
+// If no prefix is set or the key already contains a dash, returns the key as-is.
 func normalizeIssueKey(issueKey string) string {
 	// If it already contains a dash, assume it's a full key
 	if strings.Contains(issueKey, "-") {
@@ -141,7 +148,8 @@ func normalizeIssueKey(issueKey string) string {
 	return fmt.Sprintf("%s-%s", prefix, issueKey)
 }
 
-// ShowJiraIssue displays detailed information about a Jira issue
+// ShowJiraIssue displays detailed information about a Jira issue.
+// This is the main entry point for the "mcq jira show" command.
 func ShowJiraIssue(issueKey string) {
 	// Normalize issue key (add prefix if needed)
 	normalizedKey := normalizeIssueKey(issueKey)
@@ -331,387 +339,12 @@ func fetchComments(client *jira.Client, issueKey string) ([]Comment, error) {
 	return comments, nil
 }
 
-// stripHTML removes basic HTML tags from text and converts Jira links to markdown or plain text
-func stripHTML(text string) string {
-	// Convert Jira links to markdown or plain text format
-	text = convertJiraLinks(text)
-
-	// Convert Jira code blocks and formatting
-	text = convertJiraCodeBlocks(text)
-
-	// Simple HTML tag removal - this is basic but covers most cases
-	text = strings.ReplaceAll(text, "<br>", "\n")
-	text = strings.ReplaceAll(text, "<br/>", "\n")
-	text = strings.ReplaceAll(text, "<br />", "\n")
-	text = strings.ReplaceAll(text, "<p>", "\n")
-	text = strings.ReplaceAll(text, "</p>", "\n")
-	text = strings.ReplaceAll(text, "<strong>", "")
-	text = strings.ReplaceAll(text, "</strong>", "")
-	text = strings.ReplaceAll(text, "<em>", "")
-	text = strings.ReplaceAll(text, "</em>", "")
-	text = strings.ReplaceAll(text, "<b>", "")
-	text = strings.ReplaceAll(text, "</b>", "")
-	text = strings.ReplaceAll(text, "<i>", "")
-	text = strings.ReplaceAll(text, "</i>", "")
-
-	// Remove any remaining HTML tags (basic regex-like approach)
-	// This is a simple implementation - for production use, consider a proper HTML parser
-	for {
-		start := strings.Index(text, "<")
-		if start == -1 {
-			break
-		}
-		end := strings.Index(text[start:], ">")
-		if end == -1 {
-			break
-		}
-		text = text[:start] + text[start+end+1:]
-	}
-
-	// Clean up extra whitespace
-	text = strings.TrimSpace(text)
-	return text
+// formatText applies all Jira text formatting using the global formatter
+func formatText(text string) string {
+	return textFormatter.FormatText(text)
 }
 
-// convertJiraLinks converts Jira link format to markdown or plain text
-func convertJiraLinks(text string) string {
-	// Convert Jira user links [~accountid:...] to @username
-	text = convertJiraUserLinks(text)
-
-	// Convert Jira smart links [text|url|smart-link] to markdown [text](url) or just url
-	text = convertJiraSmartLinks(text)
-
-	return text
-}
-
-// convertJiraCodeBlocks converts Jira code formatting to markdown
-func convertJiraCodeBlocks(text string) string {
-	// Convert {noformat} blocks to triple backticks
-	text = convertJiraNoFormatBlocks(text)
-
-	// Convert {code} blocks to triple backticks
-	text = convertJiraCodeBlocksWithLang(text)
-
-	// Convert inline code formatting
-	text = convertJiraInlineCode(text)
-
-	// Convert headings
-	text = convertJiraHeadings(text)
-
-	return text
-}
-
-// convertJiraNoFormatBlocks converts {noformat}...{noformat} to ```...```
-func convertJiraNoFormatBlocks(text string) string {
-	start := 0
-	for {
-		// Look for {noformat}
-		startTag := strings.Index(text[start:], "{noformat}")
-		if startTag == -1 {
-			break
-		}
-		startTag += start
-
-		// Look for closing {noformat}
-		endTag := strings.Index(text[startTag+10:], "{noformat}")
-		if endTag == -1 {
-			break
-		}
-		endTag += startTag + 10
-
-		// Extract the content between tags
-		content := text[startTag+10 : endTag]
-
-		// Replace with markdown code block
-		markdownBlock := fmt.Sprintf("```\n%s\n```", content)
-		text = text[:startTag] + markdownBlock + text[endTag+10:]
-
-		// Update start position
-		start = startTag + len(markdownBlock)
-	}
-
-	return text
-}
-
-// convertJiraCodeBlocksWithLang converts {code:lang}...{code} to ```lang...```
-func convertJiraCodeBlocksWithLang(text string) string {
-	start := 0
-	for {
-		// Look for {code:lang} or {code}
-		startTag := strings.Index(text[start:], "{code")
-		if startTag == -1 {
-			break
-		}
-		startTag += start
-
-		// Find the end of the opening tag
-		tagEnd := strings.Index(text[startTag:], "}")
-		if tagEnd == -1 {
-			break
-		}
-		tagEnd += startTag + 1
-
-		// Extract language if present
-		lang := ""
-		if text[startTag+5:tagEnd-1] != "" {
-			lang = text[startTag+6 : tagEnd-1] // Skip ":"
-		}
-
-		// Look for closing {code}
-		endTag := strings.Index(text[tagEnd:], "{code}")
-		if endTag == -1 {
-			break
-		}
-		endTag += tagEnd
-
-		// Extract the content between tags
-		content := text[tagEnd:endTag]
-
-		// Replace with markdown code block
-		markdownBlock := fmt.Sprintf("```%s\n%s\n```", lang, content)
-		text = text[:startTag] + markdownBlock + text[endTag+6:]
-
-		// Update start position
-		start = startTag + len(markdownBlock)
-	}
-
-	return text
-}
-
-// convertJiraInlineCode converts {{code}} to `code`
-func convertJiraInlineCode(text string) string {
-	start := 0
-	for {
-		// Look for {{code}}
-		startTag := strings.Index(text[start:], "{{")
-		if startTag == -1 {
-			break
-		}
-		startTag += start
-
-		// Look for closing }}
-		endTag := strings.Index(text[startTag+2:], "}}")
-		if endTag == -1 {
-			break
-		}
-		endTag += startTag + 2
-
-		// Extract the content between tags
-		content := text[startTag+2 : endTag]
-
-		// Replace with markdown inline code
-		markdownCode := fmt.Sprintf("`%s`", content)
-		text = text[:startTag] + markdownCode + text[endTag+2:]
-
-		// Update start position
-		start = startTag + len(markdownCode)
-	}
-
-	return text
-}
-
-// convertJiraHeadings converts Jira headings to markdown
-func convertJiraHeadings(text string) string {
-	// Convert h1. to #
-	text = strings.ReplaceAll(text, "h1. ", "# ")
-
-	// Convert h2. to ##
-	text = strings.ReplaceAll(text, "h2. ", "## ")
-
-	// Convert h3. to ###
-	text = strings.ReplaceAll(text, "h3. ", "### ")
-
-	// Convert h4. to ####
-	text = strings.ReplaceAll(text, "h4. ", "#### ")
-
-	// Convert h5. to #####
-	text = strings.ReplaceAll(text, "h5. ", "##### ")
-
-	// Convert h6. to ######
-	text = strings.ReplaceAll(text, "h6. ", "###### ")
-
-	return text
-}
-
-// convertJiraUserLinks converts Jira user account IDs to @username format
-func convertJiraUserLinks(text string) string {
-	// Find all occurrences of [~accountid:...]
-	start := 0
-	for {
-		// Look for the start of a user link
-		userStart := strings.Index(text[start:], "[~accountid:")
-		if userStart == -1 {
-			break
-		}
-		userStart += start
-
-		// Find the end of the user link
-		userEnd := strings.Index(text[userStart:], "]")
-		if userEnd == -1 {
-			break
-		}
-		userEnd += userStart + 1
-
-		// Extract the account ID
-		accountID := text[userStart+12 : userEnd-1] // Skip "[~accountid:" and "]"
-
-		// Resolve the account ID to actual username
-		username := resolveAccountID(accountID)
-		if username == "" {
-			// Fallback to a simplified format if resolution fails
-			username = "@user-" + accountID[len(accountID)-8:]
-		}
-
-		// Replace the user link with @username
-		text = text[:userStart] + username + text[userEnd:]
-
-		// Update start position to continue searching
-		start = userStart + len(username)
-	}
-
-	return text
-}
-
-// convertJiraSmartLinks converts Jira smart links to markdown or plain text format
-func convertJiraSmartLinks(text string) string {
-	// Pattern: [text|url|smart-link] or [text|url] -> [text](url) or just url
-	start := 0
-	for {
-		// Look for the start of a smart link
-		linkStart := strings.Index(text[start:], "[")
-		if linkStart == -1 {
-			break
-		}
-		linkStart += start
-
-		// Find the end of the link
-		linkEnd := strings.Index(text[linkStart:], "]")
-		if linkEnd == -1 {
-			break
-		}
-		linkEnd += linkStart + 1
-
-		// Extract the link content
-		linkContent := text[linkStart+1 : linkEnd-1] // Skip "[" and "]"
-
-		// Check if this is a smart link format [text|url|smart-link] or [text|url]
-		parts := strings.Split(linkContent, "|")
-		if (len(parts) == 3 && parts[2] == "smart-link") || (len(parts) == 2) {
-			linkText := parts[0]
-			linkURL := parts[1]
-
-			// Parse and clean the URL to make it valid
-			var decodedURL string
-			parsedURL, err := url.Parse(linkURL)
-			if err != nil {
-				// If parsing fails, use the original URL
-				decodedURL = linkURL
-			} else {
-				// The parsed URL should be properly formatted
-				decodedURL = parsedURL.String()
-			}
-
-			var convertedLink string
-			if linkText == linkURL {
-				// If text and URL are the same, just print the decoded URL once
-				convertedLink = decodedURL
-			} else {
-				// If text and URL are different, use markdown format with decoded URL
-				convertedLink = fmt.Sprintf("[%s](%s)", linkText, decodedURL)
-			}
-
-			text = text[:linkStart] + convertedLink + text[linkEnd:]
-			start = linkStart + len(convertedLink)
-		} else {
-			// Not a smart link, continue searching
-			start = linkStart + 1
-		}
-	}
-
-	return text
-}
-
-// resolveAccountID attempts to resolve a Jira account ID to a username
-func resolveAccountID(accountID string) string {
-	// Check cache first
-	if username, exists := userCache[accountID]; exists {
-		return username
-	}
-
-	// Get configuration for API call
-	config, err := getConfig()
-	if err != nil {
-		// If we can't get config, return empty string (will use fallback)
-		return ""
-	}
-
-	// Make API call to resolve account ID
-	username := fetchUsernameByAccountID(config, accountID)
-	if username != "" {
-		// Cache the result
-		userCache[accountID] = username
-		return username
-	}
-
-	// Return empty string if resolution failed (will use fallback)
-	return ""
-}
-
-// fetchUsernameByAccountID makes an API call to resolve account ID to username
-func fetchUsernameByAccountID(config *Config, accountID string) string {
-	// Construct the API URL
-	apiURL := fmt.Sprintf("%s/rest/api/2/user?accountId=%s", config.URL, accountID)
-
-	// Create HTTP request
-	req, err := http.NewRequest("GET", apiURL, nil)
-	if err != nil {
-		return ""
-	}
-
-	// Add authentication
-	req.SetBasicAuth(config.Username, config.Password)
-	req.Header.Set("Accept", "application/json")
-
-	// Make the request
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return ""
-	}
-	defer func() {
-		if closeErr := resp.Body.Close(); closeErr != nil {
-			// Log the error but don't fail the operation
-			fmt.Printf("Warning: failed to close response body: %v\n", closeErr)
-		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return ""
-	}
-
-	// Parse response
-	var userResponse struct {
-		DisplayName  string `json:"displayName"`
-		EmailAddress string `json:"emailAddress"`
-		Key          string `json:"key"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&userResponse); err != nil {
-		return ""
-	}
-
-	// Return the display name, or email if display name is empty
-	if userResponse.DisplayName != "" {
-		return "@" + userResponse.DisplayName
-	} else if userResponse.EmailAddress != "" {
-		// Extract username from email (part before @)
-		emailParts := strings.Split(userResponse.EmailAddress, "@")
-		if len(emailParts) > 0 {
-			return "@" + emailParts[0]
-		}
-	}
-
-	return ""
-}
+// All text formatting functions have been moved to jira_formatter.go
 
 // displayIssue displays the issue information in a formatted way
 func displayIssue(issue *Issue) {
@@ -719,7 +352,7 @@ func displayIssue(issue *Issue) {
 	fmt.Println(strings.Repeat("=", 50))
 
 	// Basic information
-	fmt.Printf("📋 Summary: %s\n", stripHTML(issue.Summary))
+	fmt.Printf("📋 Summary: %s\n", formatText(issue.Summary))
 	fmt.Printf("📝 Type: %s\n", issue.Type)
 	fmt.Printf("📊 Status: %s\n", issue.Status)
 	fmt.Printf("⚡ Priority: %s\n", issue.Priority)
@@ -759,7 +392,7 @@ func displayIssue(issue *Issue) {
 	if issue.Description != "" {
 		fmt.Printf("\n📄 Description:\n")
 		// Apply the same formatting as comments (HTML cleaning and link conversion)
-		cleanDescription := stripHTML(issue.Description)
+		cleanDescription := formatText(issue.Description)
 		cleanDescription = strings.ReplaceAll(cleanDescription, "\n", "\n")
 		fmt.Printf("%s\n", cleanDescription)
 	}
@@ -774,7 +407,7 @@ func displayIssue(issue *Issue) {
 			for i, comment := range issue.Comments {
 				fmt.Printf("%d. %s (%s):\n", i+1, comment.Author, comment.Created.Format("2006-01-02 15:04:05"))
 				// Clean up the comment body (remove HTML tags and format nicely)
-				cleanBody := stripHTML(comment.Body)
+				cleanBody := formatText(comment.Body)
 				cleanBody = strings.ReplaceAll(cleanBody, "\n", "\n   ")
 				fmt.Printf("   %s\n\n", cleanBody)
 			}
