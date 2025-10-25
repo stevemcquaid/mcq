@@ -138,7 +138,9 @@ func generateUserStoryForJira(featureRequest string, modelFlag string, verbosity
 	fmt.Println("📁 Gathering repository context...")
 	// Gather repository context
 	repoContext := ai.GatherContextIfNeeded(contextConfig)
-	fmt.Println("✅ Context gathered")
+	if repoContext != nil {
+		fmt.Println("✅ Context gathered")
+	}
 
 	fmt.Println("🤖 Selecting AI model...")
 	// Select and configure model

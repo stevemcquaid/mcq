@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/stevemcquaid/mcq/pkg/errors"
 	"github.com/stevemcquaid/mcq/pkg/logger"
 )
 
@@ -20,6 +21,9 @@ func GatherContextIfNeeded(config ContextConfig) *RepoContext {
 	repoContext, err := gatherRepoContext(config)
 	if err != nil {
 		logger.LogError("context gathering", err)
+		// Display user-friendly error message
+		userErr := errors.NewUserError(errors.ContextGatheringError, err)
+		userErr.Display()
 		return nil
 	}
 
