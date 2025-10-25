@@ -100,13 +100,17 @@ func setupInteractive() {
 	// Anthropic API Key
 	anthropicKey := getInput("Anthropic API Key (for Claude)", maskAPIKey(os.Getenv("ANTHROPIC_API_KEY")), "sk-ant-...")
 	if anthropicKey != "" && !strings.HasPrefix(anthropicKey, "***") {
-		os.Setenv("ANTHROPIC_API_KEY", anthropicKey)
+		if err := os.Setenv("ANTHROPIC_API_KEY", anthropicKey); err != nil {
+			fmt.Printf("Warning: Failed to set ANTHROPIC_API_KEY: %v\n", err)
+		}
 	}
 
 	// OpenAI API Key
 	openaiKey := getInput("OpenAI API Key (for GPT models)", maskAPIKey(os.Getenv("OPENAI_API_KEY")), "sk-...")
 	if openaiKey != "" && !strings.HasPrefix(openaiKey, "***") {
-		os.Setenv("OPENAI_API_KEY", openaiKey)
+		if err := os.Setenv("OPENAI_API_KEY", openaiKey); err != nil {
+			fmt.Printf("Warning: Failed to set OPENAI_API_KEY: %v\n", err)
+		}
 	}
 
 	fmt.Println()
@@ -263,15 +267,23 @@ func saveConfiguration() {
 
 	// Set environment variables for JIRA
 	if url := viper.GetString("jira.url"); url != "" {
-		os.Setenv("JIRA_INSTANCE_URL", url)
+		if err := os.Setenv("JIRA_INSTANCE_URL", url); err != nil {
+			fmt.Printf("Warning: Failed to set JIRA_INSTANCE_URL: %v\n", err)
+		}
 	}
 	if username := viper.GetString("jira.username"); username != "" {
-		os.Setenv("JIRA_USERNAME", username)
+		if err := os.Setenv("JIRA_USERNAME", username); err != nil {
+			fmt.Printf("Warning: Failed to set JIRA_USERNAME: %v\n", err)
+		}
 	}
 	if token := viper.GetString("jira.token"); token != "" {
-		os.Setenv("JIRA_API_TOKEN", token)
+		if err := os.Setenv("JIRA_API_TOKEN", token); err != nil {
+			fmt.Printf("Warning: Failed to set JIRA_API_TOKEN: %v\n", err)
+		}
 	}
 	if prefix := viper.GetString("jira.project_prefix"); prefix != "" {
-		os.Setenv("JIRA_PROJECT_PREFIX", prefix)
+		if err := os.Setenv("JIRA_PROJECT_PREFIX", prefix); err != nil {
+			fmt.Printf("Warning: Failed to set JIRA_PROJECT_PREFIX: %v\n", err)
+		}
 	}
 }
