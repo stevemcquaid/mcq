@@ -4,7 +4,7 @@
 # Cron jobs
 queue/tasks.cron
 
-# Backup files 
+# Backup files
 *.bak
 
 # Binaries for programs and plugins
@@ -16,6 +16,7 @@ queue/tasks.cron
 # Test binary, build with `go test -c`
 *.test
 bin/*
+mcq
 
 # Output of the go coverage tool
 *.out

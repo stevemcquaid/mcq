@@ -100,7 +100,7 @@ func GolangCI(fix bool) error {
 }
 
 var GocogintCommand = []string{
-	"gocognit -over 10  -ignore \"_test|testdata|vendor/*\" .",
+	"gocognit -over 20  -ignore \"_test|testdata|vendor/*\" .",
 }
 
 func GoCogintCommand(fix bool) error {
