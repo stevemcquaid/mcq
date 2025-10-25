@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/stevemcquaid/mcq/pkg/ai"
 	"github.com/stevemcquaid/mcq/pkg/commands"
 )
 
@@ -97,11 +98,11 @@ Examples:
 		noContext, _ := cmd.Flags().GetBool("no-context")
 
 		// Determine context configuration
-		var contextConfig commands.ContextConfig
+		var contextConfig ai.ContextConfig
 		if noContext {
-			contextConfig = commands.ContextConfig{}
+			contextConfig = ai.ContextConfig{}
 		} else if autoDetect || includeReadme || includeGoMod || includeCommits || includeStructure || includeConfigs {
-			contextConfig = commands.ContextConfig{
+			contextConfig = ai.ContextConfig{
 				AutoDetect:       autoDetect,
 				IncludeReadme:    includeReadme,
 				IncludeGoMod:     includeGoMod,
@@ -112,7 +113,7 @@ Examples:
 				MaxFileSize:      50 * 1024,
 			}
 		} else {
-			contextConfig = commands.PromptForContext()
+			contextConfig = ai.PromptForContext()
 		}
 
 		_ = commands.JiraNew(userStoryArgs, model, verbosity, contextConfig)

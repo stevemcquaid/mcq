@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/stevemcquaid/mcq/pkg/commands"
+	"github.com/stevemcquaid/mcq/pkg/ai"
 )
 
 var aiCmd = &cobra.Command{
@@ -35,13 +35,13 @@ Use flags to skip the interactive prompts and specify context options directly.`
 		noContext, _ := cmd.Flags().GetBool("no-context")
 
 		// Determine context configuration
-		var contextConfig commands.ContextConfig
+		var contextConfig ai.ContextConfig
 		if noContext {
 			// Skip context gathering entirely
-			contextConfig = commands.ContextConfig{}
+			contextConfig = ai.ContextConfig{}
 		} else if autoDetect || includeReadme || includeGoMod || includeCommits || includeStructure || includeConfigs {
 			// Use explicit flags
-			contextConfig = commands.ContextConfig{
+			contextConfig = ai.ContextConfig{
 				AutoDetect:       autoDetect,
 				IncludeReadme:    includeReadme,
 				IncludeGoMod:     includeGoMod,
@@ -53,10 +53,10 @@ Use flags to skip the interactive prompts and specify context options directly.`
 			}
 		} else {
 			// Ask user interactively
-			contextConfig = commands.PromptForContext()
+			contextConfig = ai.PromptForContext()
 		}
 
-		_ = commands.AIJira(args, model, verbosity, contextConfig)
+		_ = ai.AIJira(args, model, verbosity, contextConfig)
 	},
 }
 

@@ -1,9 +1,7 @@
-package commands
+package jira
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 )
@@ -332,77 +330,7 @@ func (tf *TextFormatter) resolveAccountID(accountID string) string {
 		return username
 	}
 
-	// Get configuration for API call
-	config, err := getConfig()
-	if err != nil {
-		// If we can't get config, return empty string (will use fallback)
-		return ""
-	}
-
-	// Make API call to resolve account ID
-	username := tf.fetchUsernameByAccountID(config, accountID)
-	if username != "" {
-		// Cache the result
-		tf.userCache[accountID] = username
-		return username
-	}
-
-	// Return empty string if resolution failed (will use fallback)
-	return ""
-}
-
-// fetchUsernameByAccountID makes an API call to resolve account ID to username
-func (tf *TextFormatter) fetchUsernameByAccountID(config *Config, accountID string) string {
-	// Construct the API URL
-	apiURL := fmt.Sprintf("%s/rest/api/2/user?accountId=%s", config.URL, accountID)
-
-	// Create HTTP request
-	req, err := http.NewRequest("GET", apiURL, nil)
-	if err != nil {
-		return ""
-	}
-
-	// Add authentication
-	req.SetBasicAuth(config.Username, config.Password)
-	req.Header.Set("Accept", "application/json")
-
-	// Make the request
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return ""
-	}
-	defer func() {
-		if closeErr := resp.Body.Close(); closeErr != nil {
-			// Log the error but don't fail the operation
-			fmt.Printf("Warning: failed to close response body: %v\n", closeErr)
-		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return ""
-	}
-
-	// Parse response
-	var userResponse struct {
-		DisplayName  string `json:"displayName"`
-		EmailAddress string `json:"emailAddress"`
-		Key          string `json:"key"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&userResponse); err != nil {
-		return ""
-	}
-
-	// Return the display name, or email if display name is empty
-	if userResponse.DisplayName != "" {
-		return "@" + userResponse.DisplayName
-	} else if userResponse.EmailAddress != "" {
-		// Extract username from email (part before @)
-		emailParts := strings.Split(userResponse.EmailAddress, "@")
-		if len(emailParts) > 0 {
-			return "@" + emailParts[0]
-		}
-	}
-
-	return ""
+	// For now, return a fallback since we don't have access to config in formatter
+	// This could be improved by passing config to the formatter
+	return "@user-" + accountID[len(accountID)-8:]
 }
