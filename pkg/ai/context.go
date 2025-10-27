@@ -144,19 +144,46 @@ func isDependencyLine(line string) bool {
 			!strings.HasPrefix(line, "go ") && !strings.HasPrefix(line, "module "))
 }
 
-// gatherReadme extracts README content
+// gatherReadme extracts README content from root and docs directory
 func gatherReadme(ctx *RepoContext) error {
-	readmeFiles := []string{"README.md", "README.rst", "README.txt", "README"}
+	// First, try root directory
+	readmeFiles := []string{
+		"README.md", "README.rst", "README.txt", "README",
+	}
 
 	for _, filename := range readmeFiles {
 		content, err := os.ReadFile(filename)
 		if err == nil {
 			ctx.Readme = string(content)
-			return nil
+			// Continue to check docs directory for additional content
 		}
 	}
 
-	return fmt.Errorf("no README file found")
+	// Also check docs directory if it exists
+	if hasFileOrDir("docs") {
+		docsReadmeFiles := []string{
+			"docs/README.md", "docs/README.rst", "docs/README.txt", "docs/README",
+		}
+
+		for _, filename := range docsReadmeFiles {
+			content, err := os.ReadFile(filename)
+			if err == nil {
+				// Append docs content to existing README
+				if ctx.Readme == "" {
+					ctx.Readme = string(content)
+				} else {
+					ctx.Readme += "\n\n## Documentation\n\n" + string(content)
+				}
+				return nil
+			}
+		}
+	}
+
+	if ctx.Readme == "" {
+		return fmt.Errorf("no README file found")
+	}
+
+	return nil
 }
 
 // gatherRecentCommits gets recent commit messages
@@ -274,6 +301,12 @@ func gatherConfigFiles(ctx *RepoContext, maxSize int64) error {
 	}
 
 	return nil
+}
+
+// hasFileOrDir checks if a file or directory exists
+func hasFileOrDir(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 // determineProjectType analyzes the repository to determine project type

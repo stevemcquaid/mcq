@@ -78,6 +78,7 @@ func showMainHelp() {
 	fmt.Println("  config setup     Interactive configuration setup")
 	fmt.Println("  config test      Test current configuration")
 	fmt.Println("  config show      Show current configuration")
+	fmt.Println("  context test     Test context gathering")
 	fmt.Println()
 	fmt.Println("📋 JIRA Commands:")
 	fmt.Println("  jira show <key>  Display detailed JIRA issue information")
@@ -94,6 +95,8 @@ func showMainHelp() {
 	fmt.Println("  help             Show comprehensive help information")
 	fmt.Println("  examples         Show usage examples")
 	fmt.Println("  workflow         Show recommended workflows")
+	fmt.Println("  quick            Show quick reference")
+	fmt.Println("  commands         List all commands")
 	fmt.Println()
 
 	// Quick Start
@@ -111,6 +114,8 @@ func showMainHelp() {
 	fmt.Println("• Run 'mcq help' for comprehensive help")
 	fmt.Println("• Run 'mcq examples' for detailed usage examples")
 	fmt.Println("• Run 'mcq workflow' for recommended workflows")
-	fmt.Println("• Run 'mcq <command> --help' for command-specific help")
+	fmt.Println("• Run 'mcq quick' for a quick reference")
+	fmt.Println("• Run 'mcq commands' to list all commands")
+	fmt.Println("• Run 'mcq help <command>' for command-specific help")
 	fmt.Println()
 }

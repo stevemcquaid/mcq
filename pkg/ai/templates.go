@@ -104,7 +104,12 @@ func (tm *TemplateManager) loadCustomTemplates() error {
 			continue
 		}
 
-		tmpl, err := template.ParseFiles(templateFile)
+		// Create template with custom function map
+		tmpl := template.New(filepath.Base(templateFile)).Funcs(template.FuncMap{
+			"formatContext": formatContextForTemplate,
+		})
+
+		tmpl, err := tmpl.ParseFiles(templateFile)
 		if err != nil {
 			return fmt.Errorf("failed to parse template %s: %w", templateFile, err)
 		}
