@@ -13,7 +13,7 @@ import (
 func displayAndCopyResult(userStory string) error {
 	fmt.Println("\n📋 Copying to clipboard...")
 
-	if err := copyToClipboard(userStory); err != nil {
+	if err := CopyToClipboard(userStory); err != nil {
 		userErr := errors.WrapError(err, "Clipboard copy failed")
 		userErr.Display()
 		// Don't fail the entire operation if clipboard copy fails
@@ -30,8 +30,8 @@ func displayAndCopyResult(userStory string) error {
 	return nil
 }
 
-// copyToClipboard copies text to clipboard on macOS
-func copyToClipboard(text string) error {
+// CopyToClipboard copies text to clipboard on macOS
+func CopyToClipboard(text string) error {
 	logger.LogDetailed("Copying to clipboard", "length", len(text))
 	cmd := exec.Command("pbcopy")
 	cmd.Stdin = strings.NewReader(text)

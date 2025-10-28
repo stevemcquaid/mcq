@@ -53,6 +53,16 @@ func (m *Manager) ShowIssue(issueKey string) error {
 	return nil
 }
 
+// GetIssue retrieves a JIRA issue by key
+func (m *Manager) GetIssue(issueKey string) (*Issue, error) {
+	normalizedKey := normalizeIssueKey(issueKey)
+	issue, err := m.client.GetIssue(normalizedKey)
+	if err != nil {
+		return nil, errors.WrapError(err, fmt.Sprintf("Failed to fetch issue %s", normalizedKey))
+	}
+	return issue, nil
+}
+
 // CreateIssue creates a new JIRA issue from a user story
 func (m *Manager) CreateIssue(userStory, featureRequest string) (string, error) {
 	// Validate inputs
@@ -78,7 +88,7 @@ func (m *Manager) CreateIssue(userStory, featureRequest string) (string, error) 
 			Project:     jira.Project{Key: projectKey},
 			Type:        jira.IssueType{Name: "Story"},
 			Summary:     title,
-			Description: convertToJiraMarkup(userStory),
+			Description: ConvertToJiraMarkup(userStory),
 		},
 	}
 
@@ -88,6 +98,11 @@ func (m *Manager) CreateIssue(userStory, featureRequest string) (string, error) 
 	}
 
 	return issueKey, nil
+}
+
+// UpdateIssue updates a JIRA issue description
+func (m *Manager) UpdateIssue(issueKey, newDescription string) error {
+	return m.client.UpdateIssue(issueKey, newDescription)
 }
 
 // extractTitle extracts a title using AI with user approval
@@ -345,8 +360,8 @@ func extractTitleWithPatterns(userStory, featureRequest string) string {
 	return title
 }
 
-// convertToJiraMarkup converts markdown-style text to Jira markup
-func convertToJiraMarkup(text string) string {
+// ConvertToJiraMarkup converts markdown-style text to Jira markup
+func ConvertToJiraMarkup(text string) string {
 	lines := strings.Split(text, "\n")
 	var result []string
 

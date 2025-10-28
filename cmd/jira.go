@@ -104,10 +104,56 @@ Examples:
 	},
 }
 
+// jiraUpdateCmd represents the jira update command
+var jiraUpdateCmd = &cobra.Command{
+	Use:     "update <issue-key>",
+	Aliases: []string{"improve", "upgrade"},
+	Short:   "Improve and update a Jira issue description using AI",
+	Long: `Improve an existing Jira issue description using AI and optionally update it.
+
+This command will:
+1. Fetch the current issue description
+2. Use AI to improve and enhance it
+3. Show a side-by-side comparison of BEFORE/AFTER
+4. Copy the improved description to clipboard
+5. Ask for confirmation before updating (unless --dry-run is used)
+6. Update the Jira issue with the improved description
+
+You can use --dry-run to generate the improved description without updating the issue:
+  mcq jira update --dry-run RS-1812
+  
+This is useful when you want to see what would be generated without actually updating.
+
+Examples:
+  mcq jira update RS-1812
+  mcq jira update --dry-run RS-1812
+  mcq jira update --model claude RS-1812
+  mcq jira update --no-context RS-1812`,
+	Args: cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		issueKey := args[0]
+
+		// Get flags
+		model, _ := cmd.Flags().GetString("model")
+		verbosity, _ := cmd.Flags().GetInt("verbosity")
+		dryRun, _ := cmd.Flags().GetBool("dry-run")
+
+		// Extract context configuration
+		contextConfig := extractContextConfig(cmd)
+
+		if err := commands.JiraUpdate(issueKey, model, verbosity, contextConfig, dryRun); err != nil {
+			// Error handling is done within JiraUpdate function
+			// Exit with error code 1 to indicate failure
+			os.Exit(1)
+		}
+	},
+}
+
 func init() {
 	RootCmd.AddCommand(jiraCmd)
 	jiraCmd.AddCommand(jiraShowCmd)
 	jiraCmd.AddCommand(jiraNewCmd)
+	jiraCmd.AddCommand(jiraUpdateCmd)
 
 	// Jira configuration
 	jiraCmd.PersistentFlags().String("url", "", "Jira instance URL (can also be set via JIRA_INSTANCE_URL env var)")
@@ -116,11 +162,13 @@ func init() {
 	jiraCmd.PersistentFlags().String("password", "", "Jira password (for basic auth, can also be set via JIRA_PASSWORD env var)")
 	jiraCmd.PersistentFlags().String("project-prefix", "", "Jira project prefix (can also be set via JIRA_PROJECT_PREFIX env var)")
 
-	// AI flags for jira new command
+	// AI flags for jira new and update commands
 	addAIFlags(jiraNewCmd)
+	addAIFlags(jiraUpdateCmd)
 
-	// Add dry-run flag
+	// Add dry-run flags
 	jiraNewCmd.Flags().Bool("dry-run", false, "Generate user story without creating JIRA issue (alias for 'mcq ai jira')")
+	jiraUpdateCmd.Flags().Bool("dry-run", false, "Generate improved description without updating JIRA issue")
 
 	// Bind flags to viper
 	_ = viper.BindPFlag("jira.url", jiraCmd.PersistentFlags().Lookup("url"))

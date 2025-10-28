@@ -141,8 +141,8 @@ func WrapError(originalErr error, context string) *UserError {
 		return NewUserError(ModelNotAvailableError, originalErr)
 	case strings.Contains(errStr, "configuration") || strings.Contains(errStr, "config"):
 		return NewUserError(JiraConfigError, originalErr)
-	case strings.Contains(errStr, "context") || strings.Contains(errStr, "repository"):
-		return NewUserError(ContextGatheringError, originalErr)
+	// Note: Context gathering errors are handled gracefully in the calling code
+	// We don't auto-classify generic "context" or "repository" errors here
 	case strings.Contains(errStr, "clipboard") || strings.Contains(errStr, "pbcopy"):
 		return NewUserError(ClipboardError, originalErr)
 	default:

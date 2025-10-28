@@ -14,14 +14,19 @@ const (
 	PromptTypeUserStory PromptType = "user_story"
 	// PromptTypeTitleExtraction extracts concise titles from user stories
 	PromptTypeTitleExtraction PromptType = "title_extraction"
+	// PromptTypeDescriptionImprovement improves existing Jira descriptions
+	PromptTypeDescriptionImprovement PromptType = "description_improvement"
+	// PromptTypeDescriptionFromTitle generates a description from a Jira issue title
+	PromptTypeDescriptionFromTitle PromptType = "description_from_title"
 )
 
 // PromptConfig holds configuration for prompt generation
 type PromptConfig struct {
-	Type              PromptType
-	FeatureRequest    string
-	UserStory         string
-	RepositoryContext *RepoContext
+	Type                PromptType
+	FeatureRequest      string
+	UserStory           string
+	OriginalDescription string
+	RepositoryContext   *RepoContext
 }
 
 // GeneratePrompt creates a standardized prompt based on the type and configuration
@@ -38,9 +43,10 @@ func GeneratePrompt(config PromptConfig) string {
 
 	// Prepare template data
 	data := TemplateData{
-		FeatureRequest:    config.FeatureRequest,
-		UserStory:         config.UserStory,
-		RepositoryContext: config.RepositoryContext,
+		FeatureRequest:      config.FeatureRequest,
+		UserStory:           config.UserStory,
+		OriginalDescription: config.OriginalDescription,
+		RepositoryContext:   config.RepositoryContext,
 	}
 
 	// Generate prompt using template system
@@ -66,6 +72,10 @@ func getDefaultPrompt(config PromptConfig) string {
 		return createUserStoryPrompt(config.FeatureRequest, config.RepositoryContext)
 	case PromptTypeTitleExtraction:
 		return createTitleExtractionPrompt(config.FeatureRequest, config.UserStory)
+	case PromptTypeDescriptionImprovement:
+		return createDescriptionImprovementPrompt(config.OriginalDescription, config.RepositoryContext)
+	case PromptTypeDescriptionFromTitle:
+		return createDescriptionFromTitlePrompt(config.OriginalDescription, config.RepositoryContext)
 	default:
 		return ""
 	}
@@ -126,4 +136,72 @@ func GetTitleExtractionPromptConfig(featureRequest, userStory string) PromptConf
 		FeatureRequest: featureRequest,
 		UserStory:      userStory,
 	}
+}
+
+// GetDescriptionImprovementPromptConfig creates a prompt configuration for description improvement
+func GetDescriptionImprovementPromptConfig(originalDescription string, repoContext *RepoContext) PromptConfig {
+	return PromptConfig{
+		Type:                PromptTypeDescriptionImprovement,
+		OriginalDescription: originalDescription,
+		RepositoryContext:   repoContext,
+	}
+}
+
+// GetDescriptionFromTitlePromptConfig creates a prompt configuration for generating description from title
+func GetDescriptionFromTitlePromptConfig(title string, repoContext *RepoContext) PromptConfig {
+	return PromptConfig{
+		Type:                PromptTypeDescriptionFromTitle,
+		OriginalDescription: title,
+		RepositoryContext:   repoContext,
+	}
+}
+
+// createDescriptionImprovementPrompt creates the prompt for description improvement
+func createDescriptionImprovementPrompt(originalDescription string, repoContext *RepoContext) string {
+	basePrompt := `Improve the following Jira issue description. Make it:
+1. More comprehensive and detailed
+2. Better structured and readable
+3. Include proper user story format if missing
+4. Add acceptance criteria if not present
+5. Add technical considerations
+6. Ensure it follows best practices for user stories
+
+Preserve the existing intent and structure, but enhance clarity, completeness, and professionalism.
+
+Original Description:
+%s
+`
+
+	result := fmt.Sprintf(basePrompt, originalDescription)
+
+	if repoContext != nil {
+		contextInfo := formatContextForPrompt(repoContext)
+		result += contextInfo
+	}
+
+	return result
+}
+
+// createDescriptionFromTitlePrompt creates the prompt for generating description from title
+func createDescriptionFromTitlePrompt(title string, repoContext *RepoContext) string {
+	basePrompt := `Create a comprehensive user story description from the following Jira issue title.
+
+The description should:
+1. Follow the user story format: "As a [user type], I want [goal] so that [benefit]"
+2. Be detailed and specific, not just repeating the title
+3. Include acceptance criteria
+4. Include technical considerations
+5. Be comprehensive and well-structured
+
+Title: %s
+`
+
+	result := fmt.Sprintf(basePrompt, title)
+
+	if repoContext != nil {
+		contextInfo := formatContextForPrompt(repoContext)
+		result += contextInfo
+	}
+
+	return result
 }

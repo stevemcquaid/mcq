@@ -109,6 +109,23 @@ func (c *Client) CreateIssue(issue *jira.Issue) (string, error) {
 	return createdIssue.Key, nil
 }
 
+// UpdateIssue updates an existing JIRA issue
+func (c *Client) UpdateIssue(issueKey, newDescription string) error {
+	// Create update struct
+	update := map[string]interface{}{
+		"fields": map[string]interface{}{
+			"description": ConvertToJiraMarkup(newDescription),
+		},
+	}
+
+	_, err := c.client.Issue.UpdateIssue(issueKey, update)
+	if err != nil {
+		return errors.WrapError(err, "Failed to update issue")
+	}
+
+	return nil
+}
+
 // GetBaseURL returns the base URL for the Jira instance
 func (c *Client) GetBaseURL() string {
 	return c.config.URL
@@ -155,7 +172,8 @@ func (c *Client) convertComments(jiraComments []struct {
 	Body    string `json:"body"`
 	Created string `json:"created"`
 	Updated string `json:"updated"`
-}) []Comment {
+},
+) []Comment {
 	var comments []Comment
 	for _, c := range jiraComments {
 		created, _ := time.Parse("2006-01-02T15:04:05.000-0700", c.Created)

@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/stevemcquaid/mcq/pkg/ai"
@@ -156,7 +155,7 @@ func generateUserStoryForJira(featureRequest string, modelFlag string, verbosity
 	}
 
 	// Copy to clipboard (as requested)
-	if err := copyToClipboard(userStory); err != nil {
+	if err := ai.CopyToClipboard(userStory); err != nil {
 		logger.LogError("clipboard copy", err)
 		// Don't fail the entire operation if clipboard copy fails
 		userErr := errors.WrapError(err, "Clipboard copy failed")
@@ -166,4 +165,139 @@ func generateUserStoryForJira(featureRequest string, modelFlag string, verbosity
 	}
 
 	return userStory, nil
+}
+
+// JiraUpdate improves and updates a Jira issue description
+func JiraUpdate(issueKey string, modelFlag string, verbosityLevel int, contextConfig ai.ContextConfig, dryRun bool) error {
+	// Set up logger
+	logger.SetupLogger(verbosityLevel)
+	logger.LogBasic("Starting JiraUpdate", "issue_key", issueKey)
+
+	// Create Jira manager
+	manager, err := jira.NewManager()
+	if err != nil {
+		userErr := errors.WrapError(err, "failed to create Jira manager")
+		userErr.Display()
+		return userErr
+	}
+
+	// Fetch the issue
+	fmt.Printf("📥 Fetching issue %s...\n", issueKey)
+	issue, err := manager.GetIssue(issueKey)
+	if err != nil {
+		userErr := errors.WrapError(err, "failed to fetch issue")
+		userErr.Display()
+		return userErr
+	}
+
+	// Use title if no description exists
+	originalContent := issue.Description
+	usingTitle := false
+	if originalContent == "" {
+		if issue.Summary == "" {
+			fmt.Println("⚠️  Issue has neither description nor title to improve")
+			return fmt.Errorf("issue %s has no description or title", issueKey)
+		}
+		usingTitle = true
+		originalContent = issue.Summary
+		fmt.Printf("📋 No description found, using title instead: \"%s\"\n", issue.Summary)
+	}
+
+	// Gather context
+	fmt.Println("📁 Gathering repository context...")
+	repoContext := ai.GatherContextIfNeeded(contextConfig)
+	if repoContext != nil {
+		fmt.Println("✅ Context gathered")
+	}
+
+	// Select AI model
+	fmt.Println("🤖 Selecting AI model...")
+	selectedModel, err := ai.SelectModel(modelFlag)
+	if err != nil {
+		fmt.Printf("\n❌ Failed to select AI model\n")
+		fmt.Printf("Error: %v\n", err)
+		fmt.Printf("\n💡 Make sure you have set your API keys:\n")
+		fmt.Printf("   - ANTHROPIC_API_KEY for Claude models\n")
+		fmt.Printf("   - OPENAI_API_KEY for GPT models\n")
+		fmt.Printf("\n   Run 'mcq config setup' for guided setup\n")
+		return err
+	}
+	fmt.Printf("✅ Selected model: %s\n", selectedModel.Name)
+
+	// Generate improved description or create description from title
+	var improvedDescription string
+	if usingTitle {
+		// When using title, we want to create a description from it, not improve it
+		improvedDescription, err = ai.GenerateDescriptionFromTitle(selectedModel, originalContent, repoContext)
+	} else {
+		// When using description, we want to improve it
+		improvedDescription, err = ai.GenerateImprovedDescription(selectedModel, originalContent, repoContext)
+	}
+	if err != nil {
+		fmt.Printf("\n❌ Failed to improve description\n")
+		fmt.Printf("Error: %v\n", err)
+		fmt.Printf("\n💡 Possible solutions:\n")
+		fmt.Printf("   - Check your API key is valid\n")
+		fmt.Printf("   - Try with --no-context flag if context gathering failed\n")
+		fmt.Printf("   - Check your internet connection\n")
+		fmt.Printf("   - Try with --model flag to select a different model\n")
+		return fmt.Errorf("failed to improve description: %w", err)
+	}
+
+	fmt.Println("✅ Description improved successfully")
+
+	// Display side-by-side comparison
+	label := "Description"
+	if usingTitle {
+		label = "Title"
+	}
+	displaySideBySideComparison(originalContent, improvedDescription, label)
+
+	// Copy to clipboard
+	if err := ai.CopyToClipboard(improvedDescription); err != nil {
+		logger.LogError("clipboard copy", err)
+		userErr := errors.WrapError(err, "clipboard copy failed")
+		userErr.Display()
+	} else {
+		fmt.Println("📋 Improved description copied to clipboard!")
+	}
+
+	// If dry run, stop here
+	if dryRun {
+		fmt.Println("\n✅ Dry run complete - issue was NOT updated")
+		fmt.Println("💡 Remove --dry-run flag to update the issue")
+		return nil
+	}
+
+	// Ask for confirmation
+	if !askForConfirmation("\nUpdate Jira issue with improved description?", false) {
+		fmt.Println("Update cancelled.")
+		return nil
+	}
+
+	// Update the issue
+	if err := manager.UpdateIssue(issueKey, improvedDescription); err != nil {
+		userErr := errors.WrapError(err, "failed to update issue")
+		userErr.Display()
+		return userErr
+	}
+
+	fmt.Printf("\n✅ Issue %s updated successfully!\n", issueKey)
+	fmt.Printf("🔗 View it at: %s/browse/%s\n", manager.GetBaseURL(), issueKey)
+
+	return nil
+}
+
+// displaySideBySideComparison displays the original and improved content side by side
+func displaySideBySideComparison(original, improved string, label string) {
+	fmt.Println("\n" + strings.Repeat("=", 120))
+	fmt.Printf("BEFORE (Original %s)\n", label)
+	fmt.Println(strings.Repeat("=", 120))
+	fmt.Println(original)
+	fmt.Println()
+	fmt.Println(strings.Repeat("=", 120))
+	fmt.Println("AFTER (Improved Description)")
+	fmt.Println(strings.Repeat("=", 120))
+	fmt.Println(improved)
+	fmt.Println(strings.Repeat("=", 120))
 }

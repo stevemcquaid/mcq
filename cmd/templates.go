@@ -50,7 +50,7 @@ var templatesGenerateCmd = &cobra.Command{
 		}
 
 		// Create directory if it doesn't exist
-		if err := os.MkdirAll(outputDir, 0755); err != nil {
+		if err := os.MkdirAll(outputDir, 0o755); err != nil {
 			fmt.Printf("❌ Failed to create directory %s: %v\n", outputDir, err)
 			os.Exit(1)
 		}
@@ -160,7 +160,7 @@ User Story:
 {{.UserStory}}`
 	}
 
-	return os.WriteFile(filePath, []byte(content), 0644)
+	return os.WriteFile(filePath, []byte(content), 0o644)
 }
 
 // getPromptTypeDescription returns a description for the prompt type

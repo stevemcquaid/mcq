@@ -20,21 +20,7 @@ func GatherContextIfNeeded(config ContextConfig) *RepoContext {
 	repoContext, err := gatherRepoContext(config)
 	if err != nil {
 		logger.LogError("context gathering", err)
-
-		// Show more detailed error information
-		fmt.Printf("⚠️  Context Gathering Failed\n")
-		fmt.Printf("💡 Continuing without context (results may be less accurate)\n")
-		fmt.Printf("\n")
-		fmt.Printf("⚠️  DETAILED ERROR:\n")
-		fmt.Printf("   %v\n", err)
-		fmt.Printf("\n")
-		fmt.Printf("💡 This usually means:\n")
-		fmt.Printf("   - Not running from a Git repository root\n")
-		fmt.Printf("   - Missing go.mod file\n")
-		fmt.Printf("   - No README files found\n")
-		fmt.Printf("   - File permission issues\n")
-		fmt.Printf("\n")
-
+		logger.LogBasic("Continuing without context (results may be less accurate)")
 		return nil
 	}
 
@@ -162,17 +148,6 @@ func gatherContextComponents(ctx *RepoContext, config ContextConfig) []error {
 	return errors
 }
 
-// gatherComponent is a helper to gather a context component with error logging (deprecated)
-func gatherComponent(_ *RepoContext, shouldGather bool, componentName string, gatherFunc func() error) {
-	if !shouldGather {
-		return
-	}
-
-	if err := gatherFunc(); err != nil {
-		logger.LogBasic("Failed to gather "+componentName, "error", err)
-	}
-}
-
 // gatherGoModuleInfo extracts information from go.mod
 func gatherGoModuleInfo(ctx *RepoContext) error {
 	content, err := os.ReadFile("go.mod")
@@ -279,7 +254,6 @@ func gatherReadme(ctx *RepoContext) error {
 			}
 			return nil
 		})
-
 		if err != nil {
 			logger.LogDebug("Error walking docs directory", "error", err)
 		}
@@ -320,7 +294,7 @@ func gatherDirectoryStructure(ctx *RepoContext) error {
 		}
 
 		if shouldSkipPath(path) {
-			return getSkipAction()
+			return filepath.SkipDir
 		}
 
 		addToStructure(&structure, path, info)
@@ -339,19 +313,18 @@ func shouldSkipPath(path string) bool {
 	}
 
 	// Skip common directories that don't add value
-	skipDirs := []string{"vendor", "node_modules", ".git", "build", "dist", "target", "bin", "obj"}
-	for _, skipDir := range skipDirs {
-		if strings.Contains(path, skipDir) {
+	skipDirs := map[string]bool{
+		"vendor": true, "node_modules": true, ".git": true, "build": true,
+		"dist": true, "target": true, "bin": true, "obj": true,
+	}
+
+	for name := range skipDirs {
+		if strings.Contains(path, name) {
 			return true
 		}
 	}
 
 	return false
-}
-
-// getSkipAction returns the appropriate skip action for a directory
-func getSkipAction() error {
-	return filepath.SkipDir
 }
 
 // addToStructure adds a path to the directory structure
@@ -370,24 +343,16 @@ func addToStructure(structure *strings.Builder, path string, info os.FileInfo) {
 
 // isImportantFile determines if a file is important for context
 func isImportantFile(path string) bool {
-	importantExts := []string{".go", ".md", ".yaml", ".yml", ".json", ".toml", ".env", ".dockerfile", "Dockerfile", "Makefile"}
-	importantNames := []string{"go.mod", "go.sum", "README", "LICENSE", "CHANGELOG", "Dockerfile", "Makefile", ".gitignore"}
-
-	ext := filepath.Ext(path)
-	for _, importantExt := range importantExts {
-		if ext == importantExt {
-			return true
-		}
+	importantExts := map[string]bool{
+		".go": true, ".md": true, ".yaml": true, ".yml": true, ".json": true,
+		".toml": true, ".env": true, ".dockerfile": true, "Dockerfile": true, "Makefile": true,
+	}
+	importantNames := map[string]bool{
+		"go.mod": true, "go.sum": true, "README": true, "LICENSE": true,
+		"CHANGELOG": true, "Dockerfile": true, "Makefile": true, ".gitignore": true,
 	}
 
-	filename := filepath.Base(path)
-	for _, importantName := range importantNames {
-		if filename == importantName {
-			return true
-		}
-	}
-
-	return false
+	return importantExts[filepath.Ext(path)] || importantNames[filepath.Base(path)]
 }
 
 // gatherConfigFiles collects relevant configuration files
@@ -459,60 +424,56 @@ func formatContextForPrompt(ctx *RepoContext) string {
 	contextBuilder.WriteString("\n## Repository Context\n\n")
 
 	// Project information
-	contextBuilder.WriteString("### Project Information\n")
-	contextBuilder.WriteString(fmt.Sprintf("- **Project Name**: %s\n", ctx.ProjectName))
-	contextBuilder.WriteString(fmt.Sprintf("- **Module Path**: %s\n", ctx.ModulePath))
-	contextBuilder.WriteString(fmt.Sprintf("- **Go Version**: %s\n", ctx.GoVersion))
-	contextBuilder.WriteString(fmt.Sprintf("- **Project Type**: %s\n\n", ctx.ProjectType))
+	fmt.Fprintf(&contextBuilder, "### Project Information\n")
+	fmt.Fprintf(&contextBuilder, "- **Project Name**: %s\n", ctx.ProjectName)
+	fmt.Fprintf(&contextBuilder, "- **Module Path**: %s\n", ctx.ModulePath)
+	fmt.Fprintf(&contextBuilder, "- **Go Version**: %s\n", ctx.GoVersion)
+	fmt.Fprintf(&contextBuilder, "- **Project Type**: %s\n\n", ctx.ProjectType)
 
 	// Dependencies
 	if len(ctx.Dependencies) > 0 {
-		contextBuilder.WriteString("### Key Dependencies\n")
+		fmt.Fprintf(&contextBuilder, "### Key Dependencies\n")
 		for _, dep := range ctx.Dependencies[:minInt(10, len(ctx.Dependencies))] {
-			contextBuilder.WriteString(fmt.Sprintf("- %s\n", dep))
+			fmt.Fprintf(&contextBuilder, "- %s\n", dep)
 		}
-		contextBuilder.WriteString("\n")
+		fmt.Fprintf(&contextBuilder, "\n")
 	}
 
 	// README excerpt
 	if ctx.Readme != "" {
-		contextBuilder.WriteString("### Project Overview\n")
+		fmt.Fprintf(&contextBuilder, "### Project Overview\n")
 		readmeExcerpt := ctx.Readme
 		if len(readmeExcerpt) > 1000 {
 			readmeExcerpt = readmeExcerpt[:1000] + "..."
 		}
-		contextBuilder.WriteString(readmeExcerpt)
-		contextBuilder.WriteString("\n\n")
+		fmt.Fprintf(&contextBuilder, "%s\n\n", readmeExcerpt)
 	}
 
 	// Recent commits
 	if len(ctx.RecentCommits) > 0 {
-		contextBuilder.WriteString("### Recent Development Activity\n")
+		fmt.Fprintf(&contextBuilder, "### Recent Development Activity\n")
 		for _, commit := range ctx.RecentCommits[:minInt(5, len(ctx.RecentCommits))] {
-			contextBuilder.WriteString(fmt.Sprintf("- %s\n", commit))
+			fmt.Fprintf(&contextBuilder, "- %s\n", commit)
 		}
-		contextBuilder.WriteString("\n")
+		fmt.Fprintf(&contextBuilder, "\n")
 	}
 
 	// Directory structure
 	if ctx.DirectoryStructure != "" {
-		contextBuilder.WriteString("### Project Structure\n")
-		contextBuilder.WriteString("```\n")
-		contextBuilder.WriteString(ctx.DirectoryStructure)
-		contextBuilder.WriteString("\n```\n\n")
+		fmt.Fprintf(&contextBuilder, "### Project Structure\n```\n%s\n```\n\n", ctx.DirectoryStructure)
 	}
 
 	// Configuration files
 	if len(ctx.ConfigFiles) > 0 {
-		contextBuilder.WriteString("### Configuration Files\n")
+		fmt.Fprintf(&contextBuilder, "### Configuration Files\n")
 		for filename, content := range ctx.ConfigFiles {
-			contextBuilder.WriteString(fmt.Sprintf("**%s**:\n", filename))
+			fmt.Fprintf(&contextBuilder, "**%s**:\n```\n", filename)
 			if len(content) > 500 {
-				content = content[:500] + "..."
+				fmt.Fprintf(&contextBuilder, "%s...\n", content[:500])
+			} else {
+				fmt.Fprintf(&contextBuilder, "%s\n", content)
 			}
-			contextBuilder.WriteString("```\n")
-			contextBuilder.WriteString(content)
-			contextBuilder.WriteString("\n```\n\n")
+			fmt.Fprintf(&contextBuilder, "```\n\n")
 		}
 	}
 

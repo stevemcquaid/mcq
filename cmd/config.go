@@ -379,7 +379,7 @@ func generateTemplates(args []string) {
 	}
 
 	// Create directory if it doesn't exist
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		fmt.Printf("❌ Failed to create directory %s: %v\n", outputDir, err)
 		return
 	}
@@ -469,7 +469,7 @@ func listTemplates() {
 // generateTemplateFiles is a helper function for the interactive setup
 func generateTemplateFiles(templateDir string) error {
 	// Create directory if it doesn't exist
-	if err := os.MkdirAll(templateDir, 0755); err != nil {
+	if err := os.MkdirAll(templateDir, 0o755); err != nil {
 		return err
 	}
 

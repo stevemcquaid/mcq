@@ -14,8 +14,9 @@ import (
 // TemplateData holds all available variables for prompt templates
 type TemplateData struct {
 	// Core request data
-	FeatureRequest string
-	UserStory      string
+	FeatureRequest      string
+	UserStory           string
+	OriginalDescription string
 
 	// Repository context
 	RepositoryContext *RepoContext
@@ -71,7 +72,7 @@ func (tm *TemplateManager) LoadTemplates() error {
 // loadDefaultTemplates loads the default embedded templates
 func (tm *TemplateManager) loadDefaultTemplates() error {
 	// Create default templates for each prompt type
-	for _, promptType := range []PromptType{PromptTypeUserStory, PromptTypeTitleExtraction} {
+	for _, promptType := range []PromptType{PromptTypeUserStory, PromptTypeTitleExtraction, PromptTypeDescriptionImprovement, PromptTypeDescriptionFromTitle} {
 		tmpl, err := tm.createDefaultTemplate(promptType)
 		if err != nil {
 			return fmt.Errorf("failed to create default template for %s: %w", promptType, err)
@@ -90,7 +91,7 @@ func (tm *TemplateManager) loadCustomTemplates() error {
 	}
 
 	// Load each prompt type template
-	for _, promptType := range []PromptType{PromptTypeUserStory, PromptTypeTitleExtraction} {
+	for _, promptType := range []PromptType{PromptTypeUserStory, PromptTypeTitleExtraction, PromptTypeDescriptionImprovement, PromptTypeDescriptionFromTitle} {
 		templateFile := filepath.Join(tm.promptsDir, string(promptType)+".tpl")
 
 		if _, err := os.Stat(templateFile); os.IsNotExist(err) {
@@ -155,6 +156,38 @@ Original Feature Request: {{.FeatureRequest}}
 
 User Story: 
 {{.UserStory}}`
+
+	case PromptTypeDescriptionImprovement:
+		templateContent = `Improve the following Jira issue description. Make it:
+1. More comprehensive and detailed
+2. Better structured and readable
+3. Include proper user story format if missing
+4. Add acceptance criteria if not present
+5. Add technical considerations
+6. Ensure it follows best practices for user stories
+
+Preserve the existing intent and structure, but enhance clarity, completeness, and professionalism.
+
+Original Description:
+{{.OriginalDescription}}
+{{if .RepositoryContext}}
+{{formatContext .RepositoryContext}}
+{{end}}`
+
+	case PromptTypeDescriptionFromTitle:
+		templateContent = `Create a comprehensive user story description from the following Jira issue title.
+
+The description should:
+1. Follow the user story format: "As a [user type], I want [goal] so that [benefit]"
+2. Be detailed and specific, not just repeating the title
+3. Include acceptance criteria
+4. Include technical considerations
+5. Be comprehensive and well-structured
+
+Title: {{.OriginalDescription}}
+{{if .RepositoryContext}}
+{{formatContext .RepositoryContext}}
+{{end}}`
 	}
 
 	// Create template with repository context helper
@@ -175,18 +208,7 @@ func (tm *TemplateManager) GeneratePromptFromTemplate(promptType PromptType, dat
 	}
 
 	// Prepare template data
-	data.Now = time.Now()
-	if data.RepositoryContext != nil {
-		data.ProjectName = data.RepositoryContext.ProjectName
-		data.ModulePath = data.RepositoryContext.ModulePath
-		data.GoVersion = data.RepositoryContext.GoVersion
-		data.ProjectType = data.RepositoryContext.ProjectType
-		data.Readme = data.RepositoryContext.Readme
-		data.RecentCommits = data.RepositoryContext.RecentCommits
-		data.Dependencies = data.RepositoryContext.Dependencies
-		data.DirectoryStructure = data.RepositoryContext.DirectoryStructure
-		data.ConfigFiles = data.RepositoryContext.ConfigFiles
-	}
+	data = prepareTemplateData(data)
 
 	var result strings.Builder
 	if err := tmpl.Execute(&result, data); err != nil {
@@ -196,9 +218,26 @@ func (tm *TemplateManager) GeneratePromptFromTemplate(promptType PromptType, dat
 	return result.String(), nil
 }
 
+// prepareTemplateData populates convenience fields from repository context
+func prepareTemplateData(data TemplateData) TemplateData {
+	data.Now = time.Now()
+	if data.RepositoryContext != nil {
+		ctx := data.RepositoryContext
+		data.ProjectName = ctx.ProjectName
+		data.ModulePath = ctx.ModulePath
+		data.GoVersion = ctx.GoVersion
+		data.ProjectType = ctx.ProjectType
+		data.Readme = ctx.Readme
+		data.RecentCommits = ctx.RecentCommits
+		data.Dependencies = ctx.Dependencies
+		data.DirectoryStructure = ctx.DirectoryStructure
+		data.ConfigFiles = ctx.ConfigFiles
+	}
+	return data
+}
+
 // ValidateTemplates validates all loaded templates
 func (tm *TemplateManager) ValidateTemplates() error {
-
 	for promptType, tmpl := range tm.templates {
 		// Test template with sample data
 		testData := TemplateData{

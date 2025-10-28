@@ -14,6 +14,110 @@ import (
 	"github.com/stevemcquaid/mcq/pkg/logger"
 )
 
+// generateDescriptionFromTitleClaude generates a description from a title using Claude
+func generateDescriptionFromTitleClaude(apiKey, title string, repoContext *RepoContext) (string, error) {
+	logger.LogBasic("Starting Claude API request for description generation from title")
+	showConnectionProgress("Anthropic", "Claude Sonnet 4.5")
+
+	config := GetDescriptionFromTitlePromptConfig(title, repoContext)
+	prompt := GeneratePrompt(config)
+	request := createClaudeRequest(prompt)
+
+	jsonData, err := json.Marshal(request)
+	if err != nil {
+		return "", errors.WrapError(err, "failed to marshal request")
+	}
+
+	req, err := createClaudeHTTPRequest(apiKey, jsonData)
+	if err != nil {
+		return "", err
+	}
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", errors.WrapError(err, "failed to make request")
+	}
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			logger.LogError("close response body", closeErr)
+		}
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return "", errors.WrapError(err, fmt.Sprintf("api request failed with status %d", resp.StatusCode))
+		}
+
+		// Check for token/context limit errors
+		bodyStr := strings.ToLower(string(body))
+		if strings.Contains(bodyStr, "context_length") || strings.Contains(bodyStr, "input too long") || strings.Contains(bodyStr, "maximum context") {
+			logger.LogError("token/context limit error detected", fmt.Errorf("claude API error: %s", string(body)))
+			fmt.Printf("\n⚠️  Error: Context may be too large for Claude model\n")
+			fmt.Printf("💡 Try reducing context with --no-context or specific context flags\n")
+		}
+
+		return "", errors.WrapError(fmt.Errorf("api request failed with status %d: %s", resp.StatusCode, string(body)), "claude API request failed")
+	}
+
+	logger.LogBasic("Claude API request successful, processing stream")
+	showStreamingProgress()
+	return processClaudeStream(resp.Body)
+}
+
+// generateImprovedDescriptionClaude generates an improved description using Claude
+func generateImprovedDescriptionClaude(apiKey, originalDescription string, repoContext *RepoContext) (string, error) {
+	logger.LogBasic("Starting Claude API request for description improvement")
+	showConnectionProgress("Anthropic", "Claude Sonnet 4.5")
+
+	config := GetDescriptionImprovementPromptConfig(originalDescription, repoContext)
+	prompt := GeneratePrompt(config)
+	request := createClaudeRequest(prompt)
+
+	jsonData, err := json.Marshal(request)
+	if err != nil {
+		return "", errors.WrapError(err, "failed to marshal request")
+	}
+
+	req, err := createClaudeHTTPRequest(apiKey, jsonData)
+	if err != nil {
+		return "", err
+	}
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", errors.WrapError(err, "failed to make request")
+	}
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			logger.LogError("close response body", closeErr)
+		}
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return "", errors.WrapError(err, fmt.Sprintf("api request failed with status %d", resp.StatusCode))
+		}
+
+		// Check for token/context limit errors
+		bodyStr := strings.ToLower(string(body))
+		if strings.Contains(bodyStr, "context_length") || strings.Contains(bodyStr, "input too long") || strings.Contains(bodyStr, "maximum context") {
+			logger.LogError("token/context limit error detected", fmt.Errorf("claude API error: %s", string(body)))
+			fmt.Printf("\n⚠️  Error: Context may be too large for Claude model\n")
+			fmt.Printf("💡 Try reducing context with --no-context or specific context flags\n")
+		}
+
+		return "", errors.WrapError(fmt.Errorf("api request failed with status %d: %s", resp.StatusCode, string(body)), "claude API request failed")
+	}
+
+	logger.LogBasic("Claude API request successful, processing stream")
+	showStreamingProgress()
+	return processClaudeStream(resp.Body)
+}
+
 // generateUserStoryClaude calls the Anthropic API with streaming
 func generateUserStoryClaude(apiKey, featureRequest string, repoContext *RepoContext) (string, error) {
 	logger.LogBasic("Starting Claude API request")
@@ -25,7 +129,7 @@ func generateUserStoryClaude(apiKey, featureRequest string, repoContext *RepoCon
 
 	jsonData, err := json.Marshal(request)
 	if err != nil {
-		return "", errors.WrapError(err, "Failed to marshal request")
+		return "", errors.WrapError(err, "failed to marshal request")
 	}
 
 	req, err := createClaudeHTTPRequest(apiKey, jsonData)
@@ -36,7 +140,7 @@ func generateUserStoryClaude(apiKey, featureRequest string, repoContext *RepoCon
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", errors.WrapError(err, "Failed to make request")
+		return "", errors.WrapError(err, "failed to make request")
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
@@ -47,18 +151,18 @@ func generateUserStoryClaude(apiKey, featureRequest string, repoContext *RepoCon
 	if resp.StatusCode != http.StatusOK {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return "", errors.WrapError(err, fmt.Sprintf("API request failed with status %d", resp.StatusCode))
+			return "", errors.WrapError(err, fmt.Sprintf("api request failed with status %d", resp.StatusCode))
 		}
 
 		// Check for token/context limit errors
 		bodyStr := strings.ToLower(string(body))
 		if strings.Contains(bodyStr, "context_length") || strings.Contains(bodyStr, "input too long") || strings.Contains(bodyStr, "maximum context") {
-			logger.LogError("Token/context limit error detected", fmt.Errorf("Claude API error: %s", string(body)))
+			logger.LogError("token/context limit error detected", fmt.Errorf("claude API error: %s", string(body)))
 			fmt.Printf("\n⚠️  Error: Context may be too large for Claude model\n")
 			fmt.Printf("💡 Try reducing context with --no-context or specific context flags\n")
 		}
 
-		return "", errors.WrapError(fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body)), "Claude API request failed")
+		return "", errors.WrapError(fmt.Errorf("api request failed with status %d: %s", resp.StatusCode, string(body)), "claude API request failed")
 	}
 
 	logger.LogBasic("Claude API request successful, processing stream")
@@ -82,7 +186,7 @@ func createClaudeRequest(prompt string) AnthropicRequest {
 func createClaudeHTTPRequest(apiKey string, jsonData []byte) (*http.Request, error) {
 	req, err := http.NewRequest("POST", AnthropicAPIURL, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return nil, errors.WrapError(err, "Failed to create request")
+		return nil, errors.WrapError(err, "failed to create request")
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -127,12 +231,12 @@ func processClaudeStream(body io.ReadCloser) (string, error) {
 
 	fmt.Println()
 	if err := scanner.Err(); err != nil {
-		return "", errors.WrapError(err, "Error reading stream")
+		return "", errors.WrapError(err, "error reading stream")
 	}
 
 	response := fullResponse.String()
 	if response == "" {
-		return "", errors.WrapError(fmt.Errorf("no content in response"), "Empty response from Claude")
+		return "", errors.WrapError(fmt.Errorf("no content in response"), "empty response from claude")
 	}
 
 	return response, nil

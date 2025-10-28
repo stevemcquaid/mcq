@@ -12,6 +12,80 @@ import (
 	"github.com/stevemcquaid/mcq/pkg/logger"
 )
 
+// generateDescriptionFromTitleOpenAI generates a description from a title using OpenAI
+func generateDescriptionFromTitleOpenAI(apiKey, title, modelID string, repoContext *RepoContext) (string, error) {
+	logger.LogBasic("Starting OpenAI API request for description generation from title", "model", modelID)
+	modelName := getModelDisplayName(modelID)
+	showConnectionProgress("OpenAI", modelName)
+
+	config := GetDescriptionFromTitlePromptConfig(title, repoContext)
+	prompt := GeneratePrompt(config)
+	client := openai.NewClient(apiKey)
+	req := createOpenAIRequest(modelID, prompt)
+
+	// Create a context with timeout for stream creation
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	stream, err := client.CreateChatCompletionStream(ctx, req)
+	if err != nil {
+		// Check for token limit errors
+		errStr := strings.ToLower(err.Error())
+		if strings.Contains(errStr, "context length") || strings.Contains(errStr, "token") || strings.Contains(errStr, "maximum context") {
+			logger.LogError("Token/context limit error detected", err)
+			fmt.Printf("\n⚠️  Error: Context may be too large for the model\n")
+			fmt.Printf("💡 Try reducing context with --no-context or specific context flags\n")
+		}
+		return "", errors.WrapError(err, "Failed to create streaming request")
+	}
+	defer func() {
+		if closeErr := stream.Close(); closeErr != nil {
+			logger.LogError("close stream", closeErr)
+		}
+	}()
+
+	logger.LogBasic("OpenAI stream created successfully, processing")
+	showStreamingProgress()
+	return processOpenAIStream(stream)
+}
+
+// generateImprovedDescriptionOpenAI generates an improved description using OpenAI
+func generateImprovedDescriptionOpenAI(apiKey, originalDescription, modelID string, repoContext *RepoContext) (string, error) {
+	logger.LogBasic("Starting OpenAI API request for description improvement", "model", modelID)
+	modelName := getModelDisplayName(modelID)
+	showConnectionProgress("OpenAI", modelName)
+
+	config := GetDescriptionImprovementPromptConfig(originalDescription, repoContext)
+	prompt := GeneratePrompt(config)
+	client := openai.NewClient(apiKey)
+	req := createOpenAIRequest(modelID, prompt)
+
+	// Create a context with timeout for stream creation
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	stream, err := client.CreateChatCompletionStream(ctx, req)
+	if err != nil {
+		// Check for token limit errors
+		errStr := strings.ToLower(err.Error())
+		if strings.Contains(errStr, "context length") || strings.Contains(errStr, "token") || strings.Contains(errStr, "maximum context") {
+			logger.LogError("Token/context limit error detected", err)
+			fmt.Printf("\n⚠️  Error: Context may be too large for the model\n")
+			fmt.Printf("💡 Try reducing context with --no-context or specific context flags\n")
+		}
+		return "", errors.WrapError(err, "Failed to create streaming request")
+	}
+	defer func() {
+		if closeErr := stream.Close(); closeErr != nil {
+			logger.LogError("close stream", closeErr)
+		}
+	}()
+
+	logger.LogBasic("OpenAI stream created successfully, processing")
+	showStreamingProgress()
+	return processOpenAIStream(stream)
+}
+
 // generateUserStoryOpenAI calls the OpenAI API with streaming
 func generateUserStoryOpenAI(apiKey, featureRequest, modelID string, repoContext *RepoContext) (string, error) {
 	logger.LogBasic("Starting OpenAI API request", "model", modelID)
