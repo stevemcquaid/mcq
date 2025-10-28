@@ -7,9 +7,17 @@ func GenerateUserStory(model ModelConfig, featureRequest string, repoContext *Re
 	showProgress(model, featureRequest)
 
 	if model.Provider == "anthropic" {
-		return generateUserStoryClaude(model.APIKey, featureRequest, repoContext)
+		result, err := generateUserStoryClaude(model.APIKey, featureRequest, repoContext)
+		if err != nil {
+			fmt.Printf("\n⚠️  Claude API error: %v\n", err)
+		}
+		return result, err
 	}
-	return generateUserStoryOpenAI(model.APIKey, featureRequest, model.ModelID, repoContext)
+	result, err := generateUserStoryOpenAI(model.APIKey, featureRequest, model.ModelID, repoContext)
+	if err != nil {
+		fmt.Printf("\n⚠️  OpenAI API error: %v\n", err)
+	}
+	return result, err
 }
 
 // showProgress displays progress indicators

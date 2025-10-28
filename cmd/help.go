@@ -134,11 +134,9 @@ func showHelp() {
 	fmt.Println("  all              Run everything")
 	fmt.Println()
 	fmt.Println("📋 JIRA Commands:")
-	fmt.Println("  jira show <key>  Display detailed JIRA issue information")
-	fmt.Println("  jira new <story> Create new JIRA issue from user story")
-	fmt.Println()
-	fmt.Println("🤖 AI Commands:")
-	fmt.Println("  ai jira <story>  Convert feature request to user story")
+	fmt.Println("  jira show <key>     Display detailed JIRA issue information")
+	fmt.Println("  jira new <story>    Create JIRA issue from feature request")
+	fmt.Println("  jira new --dry-run  Generate user story without creating ticket")
 	fmt.Println()
 	fmt.Println("📝 Template Commands:")
 	fmt.Println("  templates generate [dir]  Generate example template files")
@@ -172,7 +170,7 @@ func showHelp() {
 	fmt.Println("---------------")
 	fmt.Println("1. Run 'mcq config setup' to configure JIRA and AI settings")
 	fmt.Println("2. Run 'mcq config test' to verify your configuration")
-	fmt.Println("3. Try 'mcq ai jira \"Add dark mode\"' to generate a user story")
+	fmt.Println("3. Try 'mcq jira new --dry-run \"Add dark mode\"' to generate a user story")
 	fmt.Println("4. Use 'mcq jira new \"Add dark mode\"' to create a JIRA issue")
 	fmt.Println()
 	fmt.Println("📝 Template Customization:")
@@ -253,17 +251,17 @@ func showExamples() {
 	fmt.Println("🤖 AI Examples:")
 	fmt.Println("---------------")
 	fmt.Println()
-	fmt.Println("# Generate user story")
-	fmt.Println("mcq ai jira \"Add dark mode to the application\"")
+	fmt.Println("# Generate user story without creating ticket")
+	fmt.Println("mcq jira new --dry-run \"Add dark mode to the application\"")
 	fmt.Println()
 	fmt.Println("# Generate with specific model")
-	fmt.Println("mcq ai jira --model gpt-5 \"Improve user login process\"")
+	fmt.Println("mcq jira new --dry-run --model gpt-5 \"Improve user login process\"")
 	fmt.Println()
 	fmt.Println("# Generate with context")
-	fmt.Println("mcq ai jira --include-readme --include-commits \"Add user authentication\"")
+	fmt.Println("mcq jira new --dry-run --include-readme --include-commits \"Add user authentication\"")
 	fmt.Println()
 	fmt.Println("# Generate without context")
-	fmt.Println("mcq ai jira --no-context \"Add user authentication\"")
+	fmt.Println("mcq jira new --dry-run --no-context \"Add user authentication\"")
 	fmt.Println()
 
 	// Advanced Examples
@@ -274,7 +272,7 @@ func showExamples() {
 	fmt.Println("mcq jira new --verbosity 3 \"Add dark mode\"")
 	fmt.Println()
 	fmt.Println("# Custom context configuration")
-	fmt.Println("mcq ai jira --include-readme --include-go-mod --max-commits 5 \"Add feature\"")
+	fmt.Println("mcq jira new --dry-run --include-readme --include-go-mod --max-commits 5 \"Add feature\"")
 	fmt.Println()
 	fmt.Println("# Batch processing (future feature)")
 	fmt.Println("mcq batch jira features.txt")
@@ -314,7 +312,7 @@ func showWorkflows() {
 	fmt.Println("💻 Daily Development Workflow:")
 	fmt.Println("-----------------------------")
 	fmt.Println("1. Start with a vague idea: 'Add user authentication'")
-	fmt.Println("2. Generate user story: 'mcq ai jira \"Add user authentication\"'")
+	fmt.Println("2. Generate user story (dry-run): 'mcq jira new --dry-run \"Add user authentication\"'")
 	fmt.Println("3. Review and refine the generated user story")
 	fmt.Println("4. Create JIRA issue: 'mcq jira new \"Add user authentication\"'")
 	fmt.Println("5. Work on the issue and update JIRA as needed")
@@ -323,8 +321,8 @@ func showWorkflows() {
 	// Feature Development Workflow
 	fmt.Println("🎯 Feature Development Workflow:")
 	fmt.Println("--------------------------------")
-	fmt.Println("1. Generate user story with context:")
-	fmt.Println("   'mcq ai jira --auto-context \"Add dark mode\"'")
+	fmt.Println("1. Generate user story with context (dry-run):")
+	fmt.Println("   'mcq jira new --dry-run --auto-context \"Add dark mode\"'")
 	fmt.Println("2. Create JIRA issue with AI-generated title:")
 	fmt.Println("   'mcq jira new --auto-context \"Add dark mode\"'")
 	fmt.Println("3. Review the generated content and make adjustments")
@@ -350,7 +348,7 @@ func showWorkflows() {
 	fmt.Println("2. Load context profiles when switching projects:")
 	fmt.Println("   'mcq context load go-project'")
 	fmt.Println("3. Use auto-context for new projects:")
-	fmt.Println("   'mcq ai jira --auto-context \"New feature\"'")
+	fmt.Println("   'mcq jira new --dry-run --auto-context \"New feature\"'")
 	fmt.Println()
 
 	// Troubleshooting Workflow
@@ -410,10 +408,11 @@ func showQuickReference() {
 	fmt.Println()
 
 	// AI Commands
-	fmt.Println("🤖 AI:")
-	fmt.Println("  mcq ai jira <story>           Generate user story")
-	fmt.Println("  mcq ai jira --model claude     Specify AI model")
-	fmt.Println("  mcq ai jira --auto-context     Include repo context")
+	fmt.Println("🤖 JIRA + AI:")
+	fmt.Println("  mcq jira new <story>         Create JIRA issue")
+	fmt.Println("  mcq jira new --dry-run        Generate without creating")
+	fmt.Println("  mcq jira new --model claude   Specify AI model")
+	fmt.Println("  mcq jira new --auto-context   Include repo context")
 	fmt.Println()
 
 	// Docker Commands
@@ -505,10 +504,8 @@ func listAllCommands() {
 		},
 		"📋 JIRA Integration": {
 			{"jira show", "Display JIRA issue details", []string{"view", "display", "get"}},
-			{"jira new", "Create JIRA issue from story", []string{"create", "add"}},
-		},
-		"🤖 AI Commands": {
-			{"ai jira", "Generate user story from feature request", []string{"story", "generate"}},
+			{"jira new", "Create JIRA issue from feature request", []string{"create", "add"}},
+			{"jira new --dry-run", "Generate user story without creating ticket", nil},
 		},
 		"🐳 Docker": {
 			{"docker build", "Build docker image", nil},

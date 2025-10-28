@@ -40,22 +40,6 @@ func askForConfirmation(prompt string, defaultNo bool) bool {
 	return response == "y" || response == "yes"
 }
 
-// copyToClipboard copies text to clipboard on macOS
-func copyToClipboard(text string) error {
-	logger.LogDetailed("Copying to clipboard", "length", len(text))
-	cmd := exec.Command("pbcopy")
-	cmd.Stdin = strings.NewReader(text)
-
-	err := cmd.Run()
-	if err != nil {
-		logger.LogError("clipboard copy", err)
-		return err
-	}
-
-	logger.LogBasic("Successfully copied to clipboard")
-	return nil
-}
-
 // ShowJiraIssue displays detailed information about a Jira issue.
 // This is the main entry point for the "mcq jira show" command.
 func ShowJiraIssue(issueKey string) {
@@ -74,10 +58,14 @@ func ShowJiraIssue(issueKey string) {
 }
 
 // JiraNew creates a new Jira issue from a vague user story using AI
-func JiraNew(args []string, modelFlag string, verbosityLevel int, contextConfig ai.ContextConfig) error {
+func JiraNew(args []string, modelFlag string, verbosityLevel int, contextConfig ai.ContextConfig, dryRun bool) error {
 	featureRequest := strings.Join(args, " ")
 
-	fmt.Printf("🔧 Starting JIRA issue creation for: %s\n", featureRequest)
+	if dryRun {
+		fmt.Printf("🔧 Dry run mode: Generating user story for: %s\n", featureRequest)
+	} else {
+		fmt.Printf("🔧 Starting JIRA issue creation for: %s\n", featureRequest)
+	}
 
 	// First, generate the user story using the existing AI functionality
 	fmt.Println("🤖 Generating user story...")
@@ -90,13 +78,21 @@ func JiraNew(args []string, modelFlag string, verbosityLevel int, contextConfig 
 
 	fmt.Println("✅ User story generated successfully")
 
-	// Ask for confirmation before creating the Jira issue
+	// Display the generated user story
 	fmt.Println("\n" + strings.Repeat("=", 60))
 	fmt.Println("Generated User Story:")
 	fmt.Println(strings.Repeat("=", 60))
 	fmt.Println(userStory)
 	fmt.Println(strings.Repeat("=", 60))
 
+	// If dry-run, stop here
+	if dryRun {
+		fmt.Println("\n✅ Dry run complete - JIRA issue was NOT created")
+		fmt.Println("💡 Remove --dry-run flag to create the actual JIRA issue")
+		return nil
+	}
+
+	// Ask for confirmation before creating the Jira issue
 	if !askForConfirmation("\nCreate Jira issue with this content?", false) {
 		fmt.Println("Jira issue creation cancelled.")
 		return nil
@@ -153,7 +149,10 @@ func generateUserStoryForJira(featureRequest string, modelFlag string, verbosity
 	// Generate user story
 	userStory, err := ai.GenerateUserStory(selectedModel, featureRequest, repoContext)
 	if err != nil {
-		return "", errors.WrapError(err, "Failed to generate user story")
+		// Show detailed error information
+		fmt.Printf("\n⚠️  Failed to generate user story\n")
+		fmt.Printf("Error: %v\n", err)
+		return "", fmt.Errorf("failed to generate user story: %w", err)
 	}
 
 	// Copy to clipboard (as requested)

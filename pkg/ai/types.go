@@ -61,7 +61,7 @@ type StreamingEvent struct {
 
 // Constants
 const (
-	DefaultMaxTokens = 4000
+	DefaultMaxTokens = 8000
 	GPT5Prefix       = "gpt-5"
 	AnthropicAPIURL  = "https://api.anthropic.com/v1/messages"
 	AnthropicVersion = "2023-06-01"

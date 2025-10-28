@@ -147,17 +147,37 @@ func testContext() {
 
 	// README (including docs directory if present)
 	if ctx.Readme != "" {
-		readmePreview := ctx.Readme
-		if len(readmePreview) > 200 {
-			readmePreview = readmePreview[:200] + "..."
-		}
 		hasDocsSection := strings.Contains(ctx.Readme, "## Documentation")
-		if hasDocsSection {
-			fmt.Println("📄 README (root + docs/):")
+
+		// Count how many doc files are included
+		docsCount := strings.Count(ctx.Readme, "\n\n###")
+
+		if hasDocsSection || docsCount > 0 {
+			var statusMsg string
+			if docsCount > 0 {
+				statusMsg = fmt.Sprintf("📄 README (includes root README + %d docs files from docs/ folder)", docsCount)
+			} else if hasDocsSection {
+				statusMsg = "📄 README (includes root README + docs/README.md)"
+			} else {
+				statusMsg = "📄 README"
+			}
+			fmt.Println(statusMsg)
 		} else {
 			fmt.Println("📄 README:")
 		}
+
+		// Show more content (up to 500 characters to see structure)
+		readmePreview := ctx.Readme
+		if len(readmePreview) > 500 {
+			readmePreview = readmePreview[:500] + "..."
+		}
 		fmt.Println("   " + readmePreview)
+
+		// Show summary if there's more content
+		if len(ctx.Readme) > 500 {
+			totalChars := len(ctx.Readme)
+			fmt.Printf("   [... %d more characters of documentation]\n", totalChars-500)
+		}
 		fmt.Println()
 	}
 

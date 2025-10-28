@@ -29,6 +29,13 @@ func generateUserStoryOpenAI(apiKey, featureRequest, modelID string, repoContext
 
 	stream, err := client.CreateChatCompletionStream(ctx, req)
 	if err != nil {
+		// Check for token limit errors
+		errStr := strings.ToLower(err.Error())
+		if strings.Contains(errStr, "context length") || strings.Contains(errStr, "token") || strings.Contains(errStr, "maximum context") {
+			logger.LogError("Token/context limit error detected", err)
+			fmt.Printf("\n⚠️  Error: Context may be too large for the model\n")
+			fmt.Printf("💡 Try reducing context with --no-context or specific context flags\n")
+		}
 		return "", errors.WrapError(err, "Failed to create streaming request")
 	}
 	defer func() {

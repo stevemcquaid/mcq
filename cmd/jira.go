@@ -6,7 +6,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/stevemcquaid/mcq/pkg/ai"
 	"github.com/stevemcquaid/mcq/pkg/commands"
 )
 
@@ -49,78 +48,55 @@ var jiraNewCmd = &cobra.Command{
 	Long: `Create a new Jira issue by converting a vague user story into a detailed user story using AI.
 
 This command will:
-1. Generate a detailed user story using AI (same as 'mcq ai jira')
-2. Ask for confirmation before creating the Jira issue
-3. Create a new Jira issue with the generated content as description
-4. Copy the generated user story to clipboard
+1. Generate a detailed user story using AI
+2. Display the generated user story for review
+3. Ask for confirmation before creating the Jira issue (unless --dry-run is used)
+4. Create a new Jira issue with the generated content as description
+5. Copy the generated user story to clipboard
 
 The issue will be created in the project specified by JIRA_PROJECT_PREFIX environment variable.
 
 You can provide the user story in two ways:
-1. Quoted: mcq jira new "Add dark mode to the application"
-2. Unquoted with --: mcq jira new -- Add dark mode to the application
+1. Quoted (recommended for simple text):
+   mcq jira new "Add dark mode to the application"
+   
+2. Unquoted with -- flag for unformatted input (useful for complex text or when you don't want to quote):
+   mcq jira new -- Add dark mode to the application
+   
+The -- flag tells the command to treat everything after it as the user story text, useful when your text contains quotes, special characters, or you prefer not to quote it.
+
+You can use --dry-run to generate the user story without creating the JIRA issue:
+  mcq jira new --dry-run "Add dark mode"
+  
+This is useful when you want to see what would be generated without actually creating a ticket.
 
 Examples:
   mcq jira new "Add dark mode to the application"
   mcq jira new -- Add dark mode to the application
-  mcq jira new -v 8 "install/upgrade via homebrew"
+  mcq jira new --dry-run "Add dark mode"  # Generate without creating ticket
   mcq jira new -v 8 -- install/upgrade via homebrew
   mcq jira new --model claude -- Improve user login process`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		// Check if -- is present in the arguments
-		doubleDashIndex := -1
-		for i, arg := range args {
-			if arg == "--" {
-				doubleDashIndex = i
-				break
-			}
+		// Cobra automatically handles -- as a flag terminator
+		// Everything after -- is passed as positional args
+		// So args here already contains only the user story text
+
+		// Join all args into a single user story string
+		userStoryArgs := args
+		if len(args) == 0 {
+			userStoryArgs = []string{""}
 		}
 
-		var userStoryArgs []string
-		if doubleDashIndex >= 0 {
-			// -- syntax: everything after -- is the user story
-			userStoryArgs = args[doubleDashIndex+1:]
-			if len(userStoryArgs) == 0 {
-				userStoryArgs = []string{""} // Empty user story
-			}
-		} else {
-			// No -- found, treat all args as the user story (quoted syntax)
-			userStoryArgs = args
-		}
-
-		// Get flags normally since we're not using DisableFlagParsing
+		// Get flags
 		model, _ := cmd.Flags().GetString("model")
 		verbosity, _ := cmd.Flags().GetInt("verbosity")
-		autoDetect, _ := cmd.Flags().GetBool("auto-context")
-		includeReadme, _ := cmd.Flags().GetBool("include-readme")
-		includeGoMod, _ := cmd.Flags().GetBool("include-go-mod")
-		includeCommits, _ := cmd.Flags().GetBool("include-commits")
-		includeStructure, _ := cmd.Flags().GetBool("include-structure")
-		includeConfigs, _ := cmd.Flags().GetBool("include-configs")
-		maxCommits, _ := cmd.Flags().GetInt("max-commits")
-		noContext, _ := cmd.Flags().GetBool("no-context")
+		dryRun, _ := cmd.Flags().GetBool("dry-run")
 
-		// Determine context configuration
-		var contextConfig ai.ContextConfig
-		if noContext {
-			contextConfig = ai.ContextConfig{}
-		} else if autoDetect || includeReadme || includeGoMod || includeCommits || includeStructure || includeConfigs {
-			contextConfig = ai.ContextConfig{
-				AutoDetect:       autoDetect,
-				IncludeReadme:    includeReadme,
-				IncludeGoMod:     includeGoMod,
-				IncludeCommits:   includeCommits,
-				IncludeStructure: includeStructure,
-				IncludeConfigs:   includeConfigs,
-				MaxCommits:       maxCommits,
-				MaxFileSize:      50 * 1024,
-			}
-		} else {
-			contextConfig = ai.PromptForContext()
-		}
+		// Extract context configuration
+		contextConfig := extractContextConfig(cmd)
 
-		if err := commands.JiraNew(userStoryArgs, model, verbosity, contextConfig); err != nil {
+		if err := commands.JiraNew(userStoryArgs, model, verbosity, contextConfig, dryRun); err != nil {
 			// Error handling is done within JiraNew function
 			// Exit with error code 1 to indicate failure
 			os.Exit(1)
@@ -140,17 +116,11 @@ func init() {
 	jiraCmd.PersistentFlags().String("password", "", "Jira password (for basic auth, can also be set via JIRA_PASSWORD env var)")
 	jiraCmd.PersistentFlags().String("project-prefix", "", "Jira project prefix (can also be set via JIRA_PROJECT_PREFIX env var)")
 
-	// AI flags for jira new command (for help display)
-	jiraNewCmd.Flags().StringP("model", "m", "", "AI model to use: 'claude', 'gpt-4o', 'gpt-5', 'gpt-5-mini', or 'gpt-5-nano' (auto-detected if not specified)")
-	jiraNewCmd.Flags().IntP("verbosity", "v", 0, "Set verbosity level: 0=off, 1=basic, 2=detailed, 3=verbose (use -v 8, not -v8)")
-	jiraNewCmd.Flags().Bool("auto-context", false, "Automatically detect and include relevant repository context")
-	jiraNewCmd.Flags().Bool("include-readme", false, "Include README content in context")
-	jiraNewCmd.Flags().Bool("include-go-mod", false, "Include go.mod information in context")
-	jiraNewCmd.Flags().Bool("include-commits", false, "Include recent commit messages in context")
-	jiraNewCmd.Flags().Bool("include-structure", false, "Include directory structure in context")
-	jiraNewCmd.Flags().Bool("include-configs", false, "Include configuration files in context")
-	jiraNewCmd.Flags().Int("max-commits", 10, "Maximum number of recent commits to include")
-	jiraNewCmd.Flags().Bool("no-context", false, "Skip context gathering entirely")
+	// AI flags for jira new command
+	addAIFlags(jiraNewCmd)
+
+	// Add dry-run flag
+	jiraNewCmd.Flags().Bool("dry-run", false, "Generate user story without creating JIRA issue (alias for 'mcq ai jira')")
 
 	// Bind flags to viper
 	_ = viper.BindPFlag("jira.url", jiraCmd.PersistentFlags().Lookup("url"))

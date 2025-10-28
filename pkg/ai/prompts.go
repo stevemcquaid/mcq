@@ -50,6 +50,12 @@ func GeneratePrompt(config PromptConfig) string {
 		return getDefaultPrompt(config)
 	}
 
+	// Log prompt size for debugging
+	logger.LogBasic("Generated prompt", "size_chars", len(prompt))
+	if len(prompt) > 100000 {
+		logger.LogBasic("Warning: Large prompt may exceed token limits", "size_chars", len(prompt))
+	}
+
 	return prompt
 }
 

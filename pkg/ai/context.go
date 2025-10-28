@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/stevemcquaid/mcq/pkg/errors"
 	"github.com/stevemcquaid/mcq/pkg/logger"
 )
 
@@ -21,13 +20,46 @@ func GatherContextIfNeeded(config ContextConfig) *RepoContext {
 	repoContext, err := gatherRepoContext(config)
 	if err != nil {
 		logger.LogError("context gathering", err)
-		// Display user-friendly error message
-		userErr := errors.NewUserError(errors.ContextGatheringError, err)
-		userErr.Display()
+
+		// Show more detailed error information
+		fmt.Printf("⚠️  Context Gathering Failed\n")
+		fmt.Printf("💡 Continuing without context (results may be less accurate)\n")
+		fmt.Printf("\n")
+		fmt.Printf("⚠️  DETAILED ERROR:\n")
+		fmt.Printf("   %v\n", err)
+		fmt.Printf("\n")
+		fmt.Printf("💡 This usually means:\n")
+		fmt.Printf("   - Not running from a Git repository root\n")
+		fmt.Printf("   - Missing go.mod file\n")
+		fmt.Printf("   - No README files found\n")
+		fmt.Printf("   - File permission issues\n")
+		fmt.Printf("\n")
+
 		return nil
 	}
 
 	logger.LogBasic("Repository context gathered successfully")
+
+	// Debug: Log context size information
+	if repoContext != nil {
+		readmeSize := len(repoContext.Readme)
+		structureSize := len(repoContext.DirectoryStructure)
+		totalSize := readmeSize + structureSize
+
+		logger.LogBasic("Context size info",
+			"readme_chars", readmeSize,
+			"structure_chars", structureSize,
+			"total_chars", totalSize,
+			"commits", len(repoContext.RecentCommits),
+			"deps", len(repoContext.Dependencies),
+		)
+
+		// Warn if context is very large
+		if totalSize > 100000 {
+			fmt.Printf("⚠️  Warning: Large context (%d chars) may exceed token limits\n", totalSize)
+		}
+	}
+
 	return repoContext
 }
 
@@ -47,10 +79,29 @@ func gatherRepoContext(config ContextConfig) (*RepoContext, error) {
 	config = applyAutoDetectSettings(config)
 
 	// Gather all context components
-	gatherContextComponents(ctx, config)
+	errors := gatherContextComponents(ctx, config)
 
 	// Determine project type
 	ctx.ProjectType = determineProjectType(ctx)
+
+	// Return error with details about what failed
+	if len(errors) > 0 {
+		// If we got some context, don't fail completely but log what failed
+		hasSomeContext := ctx.ProjectName != "" || ctx.Readme != "" || len(ctx.RecentCommits) > 0 || ctx.DirectoryStructure != "" || len(ctx.ConfigFiles) > 0
+
+		if !hasSomeContext {
+			// No context at all - return error with details
+			errMsg := fmt.Sprintf("failed to gather any context. Errors: %v", errors)
+			logger.LogError("Context gathering failed completely", fmt.Errorf("%s", errMsg))
+			return nil, fmt.Errorf("%s", errMsg)
+		} else {
+			// Some context but errors occurred - log and return partial context
+			logger.LogBasic("Partial context gathered with errors", "error_count", len(errors))
+			for _, err := range errors {
+				logger.LogBasic("Context error", "error", err)
+			}
+		}
+	}
 
 	return ctx, nil
 }
@@ -70,36 +121,55 @@ func applyAutoDetectSettings(config ContextConfig) ContextConfig {
 }
 
 // gatherContextComponents gathers all enabled context components
-func gatherContextComponents(ctx *RepoContext, config ContextConfig) {
-	gatherComponent(ctx, config.IncludeGoMod, "Go module info", func() error {
-		return gatherGoModuleInfo(ctx)
-	})
+func gatherContextComponents(ctx *RepoContext, config ContextConfig) []error {
+	var errors []error
 
-	gatherComponent(ctx, config.IncludeReadme, "README", func() error {
-		return gatherReadme(ctx)
-	})
+	if config.IncludeGoMod {
+		if err := gatherGoModuleInfo(ctx); err != nil {
+			logger.LogBasic("Failed to gather Go module info", "error", err)
+			errors = append(errors, fmt.Errorf("go module info: %w", err))
+		}
+	}
 
-	gatherComponent(ctx, config.IncludeCommits, "recent commits", func() error {
-		return gatherRecentCommits(ctx, config.MaxCommits)
-	})
+	if config.IncludeReadme {
+		if err := gatherReadme(ctx); err != nil {
+			logger.LogBasic("Failed to gather README", "error", err)
+			errors = append(errors, fmt.Errorf("readme: %w", err))
+		}
+	}
 
-	gatherComponent(ctx, config.IncludeStructure, "directory structure", func() error {
-		return gatherDirectoryStructure(ctx)
-	})
+	if config.IncludeCommits {
+		if err := gatherRecentCommits(ctx, config.MaxCommits); err != nil {
+			logger.LogBasic("Failed to gather recent commits", "error", err)
+			errors = append(errors, fmt.Errorf("recent commits: %w", err))
+		}
+	}
 
-	gatherComponent(ctx, config.IncludeConfigs, "config files", func() error {
-		return gatherConfigFiles(ctx, config.MaxFileSize)
-	})
+	if config.IncludeStructure {
+		if err := gatherDirectoryStructure(ctx); err != nil {
+			logger.LogBasic("Failed to gather directory structure", "error", err)
+			errors = append(errors, fmt.Errorf("directory structure: %w", err))
+		}
+	}
+
+	if config.IncludeConfigs {
+		if err := gatherConfigFiles(ctx, config.MaxFileSize); err != nil {
+			logger.LogBasic("Failed to gather config files", "error", err)
+			errors = append(errors, fmt.Errorf("config files: %w", err))
+		}
+	}
+
+	return errors
 }
 
-// gatherComponent is a helper to gather a context component with error logging
+// gatherComponent is a helper to gather a context component with error logging (deprecated)
 func gatherComponent(_ *RepoContext, shouldGather bool, componentName string, gatherFunc func() error) {
 	if !shouldGather {
 		return
 	}
 
 	if err := gatherFunc(); err != nil {
-		logger.LogDebug("Failed to gather "+componentName, "error", err)
+		logger.LogBasic("Failed to gather "+componentName, "error", err)
 	}
 }
 
@@ -161,6 +231,7 @@ func gatherReadme(ctx *RepoContext) error {
 
 	// Also check docs directory if it exists
 	if hasFileOrDir("docs") {
+		// First, try to read docs/README.md
 		docsReadmeFiles := []string{
 			"docs/README.md", "docs/README.rst", "docs/README.txt", "docs/README",
 		}
@@ -174,8 +245,43 @@ func gatherReadme(ctx *RepoContext) error {
 				} else {
 					ctx.Readme += "\n\n## Documentation\n\n" + string(content)
 				}
-				return nil
+				break // Only read the first found file
 			}
+		}
+
+		// Walk the docs directory to find all .md files
+		err := filepath.Walk("docs", func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return nil // Skip errors
+			}
+
+			// Only process .md files (excluding README which we already handled)
+			if !info.IsDir() && strings.HasSuffix(path, ".md") && !strings.Contains(path, "README") {
+				content, err := os.ReadFile(path)
+				if err == nil {
+					// Extract just the filename without path
+					fileName := filepath.Base(path)
+					sectionName := strings.TrimSuffix(fileName, ".md")
+					// Replace hyphens and underscores with spaces for better section titles
+					sectionName = strings.ReplaceAll(sectionName, "-", " ")
+					sectionName = strings.ReplaceAll(sectionName, "_", " ")
+					// Capitalize each word
+					words := strings.Fields(sectionName)
+					for i, word := range words {
+						if len(word) > 0 {
+							words[i] = strings.ToUpper(word[:1]) + strings.ToLower(word[1:])
+						}
+					}
+					sectionName = strings.Join(words, " ")
+
+					ctx.Readme += fmt.Sprintf("\n\n### %s\n\n", sectionName) + string(content)
+				}
+			}
+			return nil
+		})
+
+		if err != nil {
+			logger.LogDebug("Error walking docs directory", "error", err)
 		}
 	}
 

@@ -49,6 +49,15 @@ func generateUserStoryClaude(apiKey, featureRequest string, repoContext *RepoCon
 		if err != nil {
 			return "", errors.WrapError(err, fmt.Sprintf("API request failed with status %d", resp.StatusCode))
 		}
+
+		// Check for token/context limit errors
+		bodyStr := strings.ToLower(string(body))
+		if strings.Contains(bodyStr, "context_length") || strings.Contains(bodyStr, "input too long") || strings.Contains(bodyStr, "maximum context") {
+			logger.LogError("Token/context limit error detected", fmt.Errorf("Claude API error: %s", string(body)))
+			fmt.Printf("\n⚠️  Error: Context may be too large for Claude model\n")
+			fmt.Printf("💡 Try reducing context with --no-context or specific context flags\n")
+		}
+
 		return "", errors.WrapError(fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body)), "Claude API request failed")
 	}
 
